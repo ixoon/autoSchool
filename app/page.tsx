@@ -1,7 +1,15 @@
-import Image from "next/image";
+import Footer from "@/Components/Footer";
+import Hero from "@/Components/Hero";
+import Navbar from "@/Components/Navbar";
+import WhyUs from "@/Components/WhyUs";
 
 export default function Home() {
   return (
-    <div className="text-5xl">Pocetna stranica autoskole</div>
+    <div>
+      <Navbar />
+      <Hero />
+      <WhyUs/>
+      <Footer/>
+    </div>
   );
 }
