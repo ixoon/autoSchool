@@ -29,9 +29,11 @@ const Hero = () => {
           <button className='bg-blue-500 text-white font-bold rounded-lg p-3 w-full sm:w-auto hover:bg-blue-600 transition-colors'>
             Započni obuku
           </button>
-          <button className='bg-gray-100 border border-gray-300 text-blue-500 font-bold rounded-lg p-3 w-full sm:w-auto hover:bg-blue-100 transition-colors'>
-            Prijavi se
-          </button>
+          <a href='/requests'>
+            <button className='bg-gray-100 border border-gray-300 text-blue-500 font-bold rounded-lg p-3 w-full sm:w-auto hover:bg-blue-100 transition-colors'>
+                Prijavi se
+            </button>
+        </a>
         </div>
 
         <div className='flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-5 mt-8 sm:mt-12'>

@@ -11,6 +11,7 @@
 !.yarn/versions
 /firebase.ts
 
+config/
 
 # testing
 /coverage
