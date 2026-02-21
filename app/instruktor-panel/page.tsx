@@ -8,6 +8,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from '../../config/firebase';
 import { collection, getDocs, addDoc, serverTimestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import TestsList from '@/Components/TestsList';
 
 const Page = () => {
     const [activeSection, setActiveSection] = useState<"Glavna" | "Podesavanja">("Glavna");
@@ -568,6 +569,10 @@ const Page = () => {
                                 </div>
                             </div>
                         )}
+
+                        <div>
+                            <TestsList/>
+                        </div>
                     </div>
                 );
 

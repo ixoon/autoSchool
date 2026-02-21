@@ -8,6 +8,10 @@ import { CarFront, Settings, Users, Car, School, UsersRound, Bell, User, Lock, T
 import { useEffect, useState } from "react";
 import TestCreator from "@/Components/TestCreator";
 import { useRouter } from "next/navigation";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/config/firebase";
+import SendInvite from "@/Components/SendInvite";
+
 
 const page = () => {
     const router = useRouter();
@@ -30,13 +34,6 @@ const page = () => {
     const [studentInstruktorId, setStudentInstruktorId] = useState("");
     const [studenti, setStudenti] = useState<any[]>([]);
     const [studentError, setStudentError] = useState("");
-
-    const [inviteEmail, setInviteEmail] = useState("");
-    const [inviteRole, setInviteRole] = useState("student");
-    const [sendingInvite, setSendingInvite] = useState(false);
-    const [inviteMessage, setInviteMessage] = useState("");
-    const [inviteError, setInviteError] = useState("");
-
 
     const [users, setUsers] = useState<{id: string, fullName: string, email: string, role: string, instruktorID: string}[]>([])
     const [userError, setUserError] = useState("");
@@ -296,6 +293,8 @@ const page = () => {
     }
     };
 
+
+
     const getAutoSkolaNaziv = (id: string) => {
         const skola = autoSkole.find(s => s.id === id);
         return skola ? skola.naziv : "Nepoznato";
@@ -309,10 +308,6 @@ const page = () => {
     const logout = async () => {
         await signOut(auth)
         router.push("/")
-    }
-
-    const handleSendInvite = () => {
-
     }
 
     const renderContent = () => {
@@ -352,72 +347,9 @@ const page = () => {
 
                         </div>
 
-                        <div className="mt-12">
-  <h2 className="text-2xl font-bold text-gray-800 mb-6">Pozovi novog korisnika</h2>
-
-  <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-6 max-w-xl">
-    <div className="flex items-center space-x-3 mb-6">
-      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-        <Users className="w-6 h-6 text-blue-600" />
-      </div>
-      <div>
-        <h3 className="text-lg font-semibold text-gray-800">Slanje pozivnice</h3>
-        <p className="text-sm text-gray-500">
-          Unesite email i odaberite rolu korisnika koji dobija pristup sistemu.
-        </p>
-      </div>
-    </div>
-
-    <div className="space-y-4">
-      {/* EMAIL */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Email adresa
-        </label>
-        <input
-          type="email"
-          placeholder="npr. instruktor@gmail.com"
-          value={inviteEmail}
-          onChange={(e) => setInviteEmail(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-        />
-      </div>
-
-      {/* ROLE */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Rola korisnika
-        </label>
-        <select
-          value={inviteRole}
-          onChange={(e) => setInviteRole(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-        >
-          <option value="student">Student</option>
-          <option value="instruktor">Instruktor</option>
-          <option value="superadmin">Super Admin</option>
-        </select>
-      </div>
-
-      {/* BUTTON */}
-      <button
-        onClick={handleSendInvite}
-        disabled={sendingInvite}
-        className="w-full bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-      >
-        {sendingInvite ? "Slanje pozivnice..." : "Pošalji pozivnicu"}
-      </button>
-
-      {inviteMessage && (
-        <p className="text-green-600 text-sm text-center">{inviteMessage}</p>
-      )}
-
-      {inviteError && (
-        <p className="text-red-600 text-sm text-center">{inviteError}</p>
-      )}
-    </div>
-  </div>
-</div>
+                        <div>
+                            <SendInvite/>
+                        </div>
 
 
                         <div className="mt-12">
