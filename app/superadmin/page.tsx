@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "@/config/firebase";
 import SendInvite from "@/Components/SendInvite";
+import TestsList from "@/Components/TestsList";
 
 
 const page = () => {
@@ -347,8 +348,12 @@ const page = () => {
 
                         </div>
 
-                        <div>
+                        <div className="mt-10">
                             <SendInvite/>
+                        </div>
+
+                        <div>
+                            <TestsList />
                         </div>
 
 

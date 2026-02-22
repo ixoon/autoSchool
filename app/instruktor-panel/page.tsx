@@ -584,7 +584,7 @@ const Page = () => {
     };
 
     return (
-        <Protected allowedRoles={['superadmin']}>
+        <Protected allowedRoles={['superadmin', 'instruktor']}>
             <div className="flex h-screen bg-gray-50">
                 <aside className="h-screen w-72 p-6 top-0 sticky bg-white border-r border-gray-200">
                     <div className="flex items-center gap-3 mb-6">

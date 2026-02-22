@@ -1,10 +1,20 @@
 'use client'
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Car, Menu, X } from "lucide-react"
+import { auth } from "@/config/firebase"
+import { onAuthStateChanged } from "firebase/auth"
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsLoggedIn(!!user)
+    })
+    return () => unsubscribe()
+  }, [])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur-sm shadow-sm">
@@ -28,12 +38,18 @@ const Navbar = () => {
 
           {/* Desktop buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/login" className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 rounded-md transition-colors border border-gray-200 hover:bg-gray-100">
-              Prijava
-            </Link>
-            <Link href="/register" className="px-4 py-2 text-sm font-bold bg-blue-500 text-white rounded-md shadow hover:bg-blue-600 transition-colors">
-              Registracija
-            </Link>
+            {!isLoggedIn ? (
+              <>
+                <Link href="/login" className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 rounded-md transition-colors border border-gray-200 hover:bg-gray-100">
+                  Prijava
+                </Link>
+                {/* Registracija dugme je uklonjeno */}
+              </>
+            ) : (
+              <Link href="/student" className="px-4 py-2 text-sm font-bold bg-blue-500 text-white rounded-md shadow hover:bg-blue-600 transition-colors">
+                Moj panel
+              </Link>
+            )}
           </div>
 
           {/* Mobile toggle */}
@@ -50,12 +66,18 @@ const Navbar = () => {
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t bg-white shadow-sm">
             <nav className="flex flex-col gap-4">
-              <Link href="#features" className="text-gray-600 hover:text-gray-900 transition-colors" onClick={() => setMobileMenuOpen(false)}>About</Link>
-              <Link href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors" onClick={() => setMobileMenuOpen(false)}>Price</Link>
-              <Link href="#contact" className="text-gray-600 hover:text-gray-900 transition-colors" onClick={() => setMobileMenuOpen(false)}>Contact</Link>
+              <Link href="#features" className="text-gray-600 hover:text-gray-900 transition-colors" onClick={() => setMobileMenuOpen(false)}>O Nama</Link>
+              <Link href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors" onClick={() => setMobileMenuOpen(false)}>Cene</Link>
+              <Link href="#contact" className="text-gray-600 hover:text-gray-900 transition-colors" onClick={() => setMobileMenuOpen(false)}>Kontakt</Link>
               <div className="flex flex-col gap-3 mt-2">
-                <Link href="/login" className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors" onClick={() => setMobileMenuOpen(false)}>Login</Link>
-                <Link href="/register" className="px-4 py-2 text-sm font-bold bg-blue-500 text-white rounded-md shadow hover:bg-blue-600 transition-colors" onClick={() => setMobileMenuOpen(false)}>Registration</Link>
+                {!isLoggedIn ? (
+                  <>
+                    <Link href="/login" className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors" onClick={() => setMobileMenuOpen(false)}>Prijava</Link>
+                    {/* Registracija dugme je uklonjeno */}
+                  </>
+                ) : (
+                  <Link href="/student" className="px-4 py-2 text-sm font-bold bg-blue-500 text-white rounded-md shadow hover:bg-blue-600 transition-colors" onClick={() => setMobileMenuOpen(false)}>Moj panel</Link>
+                )}
               </div>
             </nav>
           </div>

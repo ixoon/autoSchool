@@ -9,6 +9,7 @@ import { Car, CarFront, Users, Settings, LogOut, Loader2 } from 'lucide-react';
 import Settings2 from '../../../Components/Settings';
 import { getDocs, collection, query, where, doc, getDoc } from 'firebase/firestore';
 import TestsList from '@/Components/TestsList';
+import RecentTests from '@/Components/RecentTests';
 
 const StudentDashboard = () => {
   const [activeSection, setActiveSection] = useState<"Pocetna" | "Podesavanja">("Pocetna");
@@ -173,7 +174,12 @@ const StudentDashboard = () => {
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Tvoji testovi</h3>
               <TestsList />
             </div>
+
+            <div>
+              <RecentTests/>
+            </div>
           </div>
+          
         );
 
       case "Podesavanja":

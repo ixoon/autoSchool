@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { db } from '@/config/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { db, auth } from '@/config/firebase';
+import { addDoc,collection, Timestamp, doc, getDoc } from 'firebase/firestore';
 import Protected from '@/Components/Protected';
 
 type Question = {
@@ -64,20 +64,43 @@ export default function TestRunner() {
     }
   };
 
-  const finishTest = () => {
-    let total = 0;
+  const finishTest = async () => {
+  let total = 0;
 
-    test.questions.forEach((q, i) => {
-      const selected = answers[i].sort().join(',');
-      const correct = q.correctOptions.sort().join(',');
-      if (selected === correct) {
-        total += q.points;
-      }
+  test.questions.forEach((q, i) => {
+    const selected = answers[i].sort().join(',');
+    const correct = q.correctOptions.sort().join(',');
+    if (selected === correct) {
+      total += q.points;
+    }
+  });
+
+  setScore(total);
+  setFinished(true);
+
+  // 🔥 Snimi rezultat testa
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const now = Timestamp.now();
+    const expiresAt = Timestamp.fromDate(
+      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    );
+
+    await addDoc(collection(db, 'testHistory'), {
+      userId: user.uid,
+      testId: testId,
+      answers: answers.map(a => ({ selected: a })),
+      score: total,
+      totalPoints: test.questions.reduce((sum, q) => sum + q.points, 0),
+      createdAt: now,
+      expiresAt,
     });
-
-    setScore(total);
-    setFinished(true);
-  };
+  } catch (err) {
+    console.error('Greška pri snimanju testa:', err);
+  }
+};
 
   if (finished) {
     const maxPoints = test.questions.reduce((sum, q) => sum + q.points, 0);

@@ -12,10 +12,12 @@ import {
   query,
   where,
   getDocs,
+  getDoc,
   updateDoc,
   doc,
   setDoc,
-  serverTimestamp
+  serverTimestamp,
+  writeBatch
 } from "firebase/firestore";
 import Link from "next/link";
 
@@ -38,6 +40,13 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
+
+  // Funkcija za dodavanje debug poruka
+  const addDebug = (msg: string) => {
+    console.log(msg);
+    setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
+  };
 
   useEffect(() => {
     const checkInvite = async () => {
@@ -47,7 +56,7 @@ export default function RegisterPage() {
         return;
       }
 
-      console.log("Provera tokena:", token);
+      addDebug(`Provera tokena: ${token}`);
 
       try {
         // Provera da li invite postoji
@@ -57,7 +66,7 @@ export default function RegisterPage() {
         );
 
         const snapshot = await getDocs(q);
-        console.log("Broj pronađenih invite-ova:", snapshot.size);
+        addDebug(`Broj pronađenih invite-ova: ${snapshot.size}`);
 
         if (snapshot.empty) {
           setError("Pozivnica ne postoji. Proverite link.");
@@ -67,7 +76,7 @@ export default function RegisterPage() {
 
         const inviteDoc = snapshot.docs[0];
         const inviteData = inviteDoc.data();
-        console.log("Invite podaci:", inviteData);
+        addDebug(`Invite podaci: ${JSON.stringify(inviteData)}`);
 
         // Provera da li je već iskorišćen
         if (inviteData.used) {
@@ -84,7 +93,8 @@ export default function RegisterPage() {
           return;
         }
 
-        // Provera da li korisnik već postoji
+        // Provera da li korisnik već postoji u auth
+        // Ovo ne možemo direktno proveriti, ali možemo proveriti u users kolekciji
         const userCheck = await getDocs(
           query(collection(db, "users"), where("email", "==", inviteData.email))
         );
@@ -93,6 +103,23 @@ export default function RegisterPage() {
           setError("Korisnik sa ovim email-om već postoji. Idite na login.");
           setLoading(false);
           return;
+        }
+
+        // Provera da li već postoji u specifičnoj kolekciji
+        if (inviteData.role === "student") {
+          const studentCheck = await getDocs(
+            query(collection(db, "studenti"), where("email", "==", inviteData.email))
+          );
+          if (!studentCheck.empty) {
+            addDebug(`Upozorenje: Student već postoji u studenti kolekciji, ali ne u users`);
+          }
+        } else if (inviteData.role === "instruktor") {
+          const instruktorCheck = await getDocs(
+            query(collection(db, "instruktori"), where("email", "==", inviteData.email))
+          );
+          if (!instruktorCheck.empty) {
+            addDebug(`Upozorenje: Instruktor već postoji u instruktori kolekciji, ali ne u users`);
+          }
         }
 
         // Postavljanje podataka
@@ -115,6 +142,7 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setDebugInfo([]);
 
     // Validacija
     if (!fullName.trim()) {
@@ -140,42 +168,206 @@ export default function RegisterPage() {
     setRegistering(true);
 
     try {
-      console.log("Kreiranje naloga za:", email);
+      addDebug(`Započinjem registraciju za: ${email} sa rolom: ${role}`);
       
-      // Kreiranje naloga
+      // KORAK 1: Kreiranje naloga u Firebase Auth
+      addDebug("Kreiranje naloga u Firebase Auth...");
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       const user = cred.user;
-      
-      console.log("Nalog kreiran:", user.uid);
+      addDebug(`Nalog kreiran sa UID: ${user.uid}`);
 
-      // Slanje email verifikacije
+      // KORAK 2: Slanje email verifikacije
+      addDebug("Slanje email verifikacije...");
       await sendEmailVerification(user);
-      console.log("Email za verifikaciju poslat");
+      addDebug("Email za verifikaciju poslat");
 
-      // Kreiranje korisnika u Firestore-u
-      const userData = {
+      // KORAK 3: Priprema podataka
+      const normalizedRole = role.trim().toLowerCase();
+      const now = new Date();
+      
+      // Osnovni podaci za sve kolekcije
+      const baseUserData = {
         fullName: fullName.trim(),
         email,
-        role,
+        role: normalizedRole,
         createdAt: serverTimestamp(),
-        createdAtHuman: new Date().toISOString(),
+        createdAtHuman: now.toISOString(),
         emailVerified: false,
-        uid: user.uid
+        uid: user.uid,
+        status: "aktivan",
+        lastLogin: null,
+        updatedAt: serverTimestamp()
       };
 
-      await setDoc(doc(db, "users", user.uid), userData);
-      console.log("Korisnik dodat u Firestore");
+      // KORAK 4: Korišćenje batch-a za sve Firestore operacije
+      const batch = writeBatch(db);
 
-      // Obeležavanje invite-a kao iskorišćenog
-      await updateDoc(doc(db, "invites", inviteDocId), {
+      // 4.1 Kreiranje u users kolekciji (UVEK)
+      const userRef = doc(db, "users", user.uid);
+      batch.set(userRef, baseUserData);
+      addDebug("Pripremljen dokument za users kolekciju");
+
+      // 4.2 Kreiranje u specifičnoj kolekciji prema roli
+      if (normalizedRole === "student") {
+        // Provera da li već postoji u studenti kolekciji
+        const studentQuery = query(
+          collection(db, "studenti"), 
+          where("email", "==", email)
+        );
+        const studentSnapshot = await getDocs(studentQuery);
+        
+        if (!studentSnapshot.empty) {
+          addDebug(`Student već postoji u studenti kolekciji, ažuriram...`);
+          // Ažuriraj postojeći dokument
+          const existingStudent = studentSnapshot.docs[0];
+          batch.update(doc(db, "studenti", existingStudent.id), {
+            ...baseUserData,
+            userId: user.uid,
+            updatedAt: serverTimestamp()
+          });
+        } else {
+          // Kreiraj novi dokument
+          const studentData = {
+            ...baseUserData,
+            // Student specifična polja
+            kategorija: "", // Biće popunjeno kasnije
+            instruktorId: null,
+            instruktorIme: null,
+            brojTelefona: "",
+            adresa: "",
+            datumRodjenja: null,
+            brojPokusaja: 0,
+            polozenTeorija: false,
+            polozenPrakticni: false,
+            prijavljeniTestovi: [],
+            rezultati: [],
+            // Veza ka users dokumentu
+            userId: user.uid,
+            userRef: `/users/${user.uid}`
+          };
+          
+          const studentRef = doc(db, "studenti", user.uid);
+          batch.set(studentRef, studentData);
+        }
+        addDebug("Pripremljen dokument za studenti kolekciju");
+
+      } else if (normalizedRole === "instruktor") {
+        // Provera da li već postoji u instruktori kolekciji
+        const instruktorQuery = query(
+          collection(db, "instruktori"), 
+          where("email", "==", email)
+        );
+        const instruktorSnapshot = await getDocs(instruktorQuery);
+        
+        if (!instruktorSnapshot.empty) {
+          addDebug(`Instruktor već postoji u instruktori kolekciji, ažuriram...`);
+          const existingInstruktor = instruktorSnapshot.docs[0];
+          batch.update(doc(db, "instruktori", existingInstruktor.id), {
+            ...baseUserData,
+            userId: user.uid,
+            updatedAt: serverTimestamp()
+          });
+        } else {
+          // Instruktor specifična polja
+          const instruktorData = {
+            ...baseUserData,
+            specijalizacija: [], // Npr. ["B kategorija", "C kategorija"]
+            brojTelefona: "",
+            grad: "",
+            dostupan: true,
+            brojStudenata: 0,
+            listaStudenata: [], // IDs studenata
+            iskustvo: "",
+            biografija: "",
+            // Veza ka users dokumentu
+            userId: user.uid,
+            userRef: `/users/${user.uid}`
+          };
+          
+          const instruktorRef = doc(db, "instruktori", user.uid);
+          batch.set(instruktorRef, instruktorData);
+        }
+        addDebug("Pripremljen dokument za instruktori kolekciju");
+
+      } else if (normalizedRole === "superadmin") {
+        // Provera da li već postoji u admini kolekciji
+        const adminQuery = query(
+          collection(db, "admini"), 
+          where("email", "==", email)
+        );
+        const adminSnapshot = await getDocs(adminQuery);
+        
+        if (!adminSnapshot.empty) {
+          addDebug(`Admin već postoji u admini kolekciji, ažuriram...`);
+          const existingAdmin = adminSnapshot.docs[0];
+          batch.update(doc(db, "admini", existingAdmin.id), {
+            ...baseUserData,
+            userId: user.uid,
+            updatedAt: serverTimestamp()
+          });
+        } else {
+          // Admin specifična polja
+          const adminData = {
+            ...baseUserData,
+            nivoPristupa: "pun",
+            permissions: ["all"],
+            lastLogin: null,
+            // Veza ka users dokumentu
+            userId: user.uid,
+            userRef: `/users/${user.uid}`
+          };
+          
+          const adminRef = doc(db, "admini", user.uid);
+          batch.set(adminRef, adminData);
+        }
+        addDebug("Pripremljen dokument za admini kolekciju");
+      }
+
+      // 4.3 Obeležavanje invite-a kao iskorišćenog
+      const inviteRef = doc(db, "invites", inviteDocId);
+      batch.update(inviteRef, {
         used: true,
         usedAt: serverTimestamp(),
         usedBy: user.uid,
-        usedAtHuman: new Date().toISOString()
+        usedAtHuman: now.toISOString(),
+        registeredRole: normalizedRole,
+        registeredFullName: fullName.trim()
       });
-      
-      console.log("Invite označen kao iskorišćen");
+      addDebug("Pripremljeno ažuriranje invite-a");
 
+      // KORAK 5: Izvršavanje batch operacije
+      await batch.commit();
+      addDebug("Sve Firestore operacije uspešno izvršene!");
+
+      // KORAK 6: Dodatne provere nakon registracije
+      addDebug("Provera uspešnosti upisa...");
+      
+      // Provera users kolekcije
+      const userCheck = await getDoc(doc(db, "users", user.uid));
+      if (userCheck.exists()) {
+        addDebug(`✓ Users kolekcija: Dokument postoji sa rolom: ${userCheck.data()?.role}`);
+      } else {
+        addDebug(`✗ Users kolekcija: Dokument NE postoji!`);
+      }
+
+      // Provera specifične kolekcije
+      if (normalizedRole === "student") {
+        const studentCheck = await getDoc(doc(db, "studenti", user.uid));
+        if (studentCheck.exists()) {
+          addDebug(`✓ Studenti kolekcija: Dokument postoji`);
+        } else {
+          addDebug(`✗ Studenti kolekcija: Dokument NE postoji!`);
+        }
+      } else if (normalizedRole === "instruktor") {
+        const instruktorCheck = await getDoc(doc(db, "instruktori", user.uid));
+        if (instruktorCheck.exists()) {
+          addDebug(`✓ Instruktori kolekcija: Dokument postoji`);
+        } else {
+          addDebug(`✗ Instruktori kolekcija: Dokument NE postoji!`);
+        }
+      }
+
+      addDebug("🎉 Registracija uspešno završena!");
       setSuccess(true);
       
       // Preusmeravanje nakon 3 sekunde
@@ -185,16 +377,46 @@ export default function RegisterPage() {
 
     } catch (err: any) {
       console.error("Greška pri registraciji:", err);
+      addDebug(`❌ Greška: ${err.message}`);
       
       if (err.code === "auth/email-already-in-use") {
         setError("Email adresa je već u upotrebi.");
       } else if (err.code === "auth/weak-password") {
         setError("Lozinka je previše slaba.");
+      } else if (err.code === "auth/network-request-failed") {
+        setError("Mrežna greška. Proverite internet konekciju.");
       } else {
         setError("Došlo je do greške prilikom registracije. Pokušajte ponovo.");
       }
     } finally {
       setRegistering(false);
+    }
+  };
+
+  // Helper funkcija za proveru postojećih podataka
+  const checkExistingData = async () => {
+    if (!email) return;
+    
+    try {
+      addDebug("Ručna provera postojećih podataka...");
+      
+      // Provera users
+      const usersQuery = query(collection(db, "users"), where("email", "==", email));
+      const usersSnap = await getDocs(usersQuery);
+      addDebug(`Users kolekcija: ${usersSnap.size} dokumenata`);
+      
+      // Provera studenti
+      const studentiQuery = query(collection(db, "studenti"), where("email", "==", email));
+      const studentiSnap = await getDocs(studentiQuery);
+      addDebug(`Studenti kolekcija: ${studentiSnap.size} dokumenata`);
+      
+      // Provera instruktori
+      const instruktoriQuery = query(collection(db, "instruktori"), where("email", "==", email));
+      const instruktoriSnap = await getDocs(instruktoriQuery);
+      addDebug(`Instruktori kolekcija: ${instruktoriSnap.size} dokumenata`);
+      
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -212,19 +434,22 @@ export default function RegisterPage() {
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-            </svg>
+        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Uspešna registracija!</h2>
+            <p className="text-gray-600 mb-4">
+              Proverite vaš email ({email}) i verifikujte nalog.
+            </p>
+            
+            <p className="text-sm text-gray-500 mt-4">
+              Preusmeravanje na login stranicu...
+            </p>
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Uspešna registracija!</h2>
-          <p className="text-gray-600 mb-4">
-            Proverite vaš email ({email}) i verifikujte nalog.
-          </p>
-          <p className="text-sm text-gray-500">
-            Preusmeravanje na login stranicu...
-          </p>
         </div>
       </div>
     );
@@ -233,20 +458,24 @@ export default function RegisterPage() {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
+        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Greška</h2>
+            <p className="text-gray-600 mb-6">{error}</p>
+            
+            <Link
+              href="/"
+              className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            >
+              Idi na početnu
+            </Link>
+
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Greška</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <Link
-            href="/"
-            className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
-          >
-            Idi na početnu
-          </Link>
         </div>
       </div>
     );
@@ -356,7 +585,9 @@ export default function RegisterPage() {
               <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
+
         </form>
+
       </div>
     </div>
   );
