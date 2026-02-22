@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { auth, db } from "../../lib/firebase";
@@ -23,7 +24,8 @@ import Link from "next/link";
 
 type Role = "student" | "instruktor" | "superadmin";
 
-export default function RegisterPage() {
+// Komponenta koja koristi useSearchParams
+function RegisterForm() {
   const params = useSearchParams();
   const token = params.get("token");
   const router = useRouter();
@@ -393,33 +395,6 @@ export default function RegisterPage() {
     }
   };
 
-  // Helper funkcija za proveru postojećih podataka
-  const checkExistingData = async () => {
-    if (!email) return;
-    
-    try {
-      addDebug("Ručna provera postojećih podataka...");
-      
-      // Provera users
-      const usersQuery = query(collection(db, "users"), where("email", "==", email));
-      const usersSnap = await getDocs(usersQuery);
-      addDebug(`Users kolekcija: ${usersSnap.size} dokumenata`);
-      
-      // Provera studenti
-      const studentiQuery = query(collection(db, "studenti"), where("email", "==", email));
-      const studentiSnap = await getDocs(studentiQuery);
-      addDebug(`Studenti kolekcija: ${studentiSnap.size} dokumenata`);
-      
-      // Provera instruktori
-      const instruktoriQuery = query(collection(db, "instruktori"), where("email", "==", email));
-      const instruktoriSnap = await getDocs(instruktoriQuery);
-      addDebug(`Instruktori kolekcija: ${instruktoriSnap.size} dokumenata`);
-      
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -588,7 +563,35 @@ export default function RegisterPage() {
 
         </form>
 
+        {/* Debug info - sakriveno u produkciji */}
+        {process.env.NODE_ENV === 'development' && debugInfo.length > 0 && (
+          <div className="mt-8 p-4 bg-gray-100 rounded-lg">
+            <h3 className="font-semibold mb-2">Debug info:</h3>
+            <pre className="text-xs overflow-auto max-h-40">
+              {debugInfo.map((msg, i) => (
+                <div key={i}>{msg}</div>
+              ))}
+            </pre>
+          </div>
+        )}
+
       </div>
     </div>
+  );
+}
+
+// Glavna stranica sa Suspense granicom
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Učitavanje stranice...</p>
+        </div>
+      </div>
+    }>
+      <RegisterForm />
+    </Suspense>
   );
 }
