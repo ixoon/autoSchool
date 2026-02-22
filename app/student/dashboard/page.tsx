@@ -196,7 +196,7 @@ const StudentDashboard = () => {
   };
 
   return (
-    <Protected allowedRoles={['superadmin', 'student']}>
+    <Protected allowedRoles={["student"]}>
       <div className="flex h-screen bg-gray-50">
         {/* Sidebar */}
         <aside className="h-screen w-64 p-4 top-0 sticky bg-white border-r border-gray-200 flex flex-col">
