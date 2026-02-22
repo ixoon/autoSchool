@@ -2,7 +2,7 @@
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Car, Menu, X } from "lucide-react"
-import { auth } from "@/config/firebase"
+import { auth } from "../config/firebase"
 import { onAuthStateChanged } from "firebase/auth"
 
 const Navbar = () => {
