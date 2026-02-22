@@ -1,6 +1,6 @@
 'use client';
 
-import { auth, db } from '../../config/firebase';
+import { auth, db } from '../../lib/firebase';
 import { sendEmailVerification, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react'

@@ -5,7 +5,7 @@ import { Car, CarFront, Settings, Users, CalendarDays, Plus, Clock, User, Calend
 import Protected from '../../Components/Protected'
 import Settings2 from '../../Components/Settings';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth, db } from '../../config/firebase';
+import { auth, db } from '../../lib/firebase';
 import { collection, getDocs, addDoc, serverTimestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import TestsList from '../../Components/TestsList';

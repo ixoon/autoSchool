@@ -2,7 +2,7 @@
 import React, {useState, useEffect} from 'react'
 import { User, Mail, Shield, Lock, Trash2, KeyRound } from 'lucide-react'
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, deleteUser, onAuthStateChanged, updatePassword } from 'firebase/auth'
-import { db } from '../config/firebase'
+import { db } from '../lib/firebase'
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
 
 const Settings = () => {

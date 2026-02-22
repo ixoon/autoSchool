@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { db } from '../../../../config/firebase';
+import { db } from '../../../../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import Protected from '../../../../Components/Protected';
 

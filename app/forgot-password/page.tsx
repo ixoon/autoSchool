@@ -1,6 +1,6 @@
 'use client';
 
-import { auth } from '../../config/firebase';
+import { auth } from '../../lib/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import React, { useState } from 'react'
 

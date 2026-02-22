@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { httpsCallable } from "firebase/functions";
-import { functions } from "../config/firebase";
+import { functions } from "../lib/firebase";
 
 type Props = {
   onSuccess?: () => void;
