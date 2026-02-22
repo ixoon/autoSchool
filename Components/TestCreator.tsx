@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import { db, storage } from "@/config/firebase";
+import { db, storage } from "../config/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Plus, Trash2, Image, CheckCircle, XCircle, Save, FileText, HelpCircle, AlertCircle } from "lucide-react";

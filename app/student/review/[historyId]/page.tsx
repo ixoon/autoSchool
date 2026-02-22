@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { db } from '@/config/firebase';
+import { db } from '../../../../config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import Protected from '@/Components/Protected';
+import Protected from '../../../../Components/Protected';
 
 type Question = {
   question: string;

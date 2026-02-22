@@ -1,15 +1,15 @@
 'use client';
 
-import { auth, db } from '@/config/firebase';
+import { auth, db } from '../../../config/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import Protected from '@/Components/Protected';
+import Protected from '../../../Components/Protected';
 import React, { useEffect, useState } from 'react';
 import { Car, CarFront, Users, Settings, LogOut, Loader2 } from 'lucide-react';
 import Settings2 from '../../../Components/Settings';
 import { getDocs, collection, query, where, doc, getDoc } from 'firebase/firestore';
-import TestsList from '@/Components/TestsList';
-import RecentTests from '@/Components/RecentTests';
+import TestsList from '../../../Components/TestsList';
+import RecentTests from '../../../Components/RecentTests';
 
 const StudentDashboard = () => {
   const [activeSection, setActiveSection] = useState<"Pocetna" | "Podesavanja">("Pocetna");

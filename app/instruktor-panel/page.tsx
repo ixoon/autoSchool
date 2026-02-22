@@ -3,12 +3,12 @@
 import React, { useEffect, useState } from 'react'
 import { Car, CarFront, Settings, Users, CalendarDays, Plus, Clock, User, Calendar, ChevronRight, MoreVertical, X, Trash2, Edit, Check, AlertCircle } from 'lucide-react'
 import Protected from '../../Components/Protected'
-import Settings2 from '@/Components/Settings';
+import Settings2 from '../../Components/Settings';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from '../../config/firebase';
 import { collection, getDocs, addDoc, serverTimestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import TestsList from '@/Components/TestsList';
+import TestsList from '../../Components/TestsList';
 
 const Page = () => {
     const [activeSection, setActiveSection] = useState<"Glavna" | "Podesavanja">("Glavna");

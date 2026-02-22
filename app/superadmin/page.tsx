@@ -1,17 +1,17 @@
 'use client';
 
-import Protected from "@/Components/Protected";
+import Protected from "../../Components/Protected";
 import { deleteUser, EmailAuthCredential, EmailAuthProvider, getAuth, onAuthStateChanged, reauthenticateWithCredential, signOut, updatePassword } from "firebase/auth";
-import { auth, db } from "@/config/firebase";
+import { auth, db } from "../../config/firebase";
 import { addDoc, collection, getDocs, serverTimestamp, updateDoc, doc, deleteDoc } from "firebase/firestore";
 import { CarFront, Settings, Users, Car, School, UsersRound, Bell, User, Lock, Trash2, Mail, Shield, KeyRound } from "lucide-react";
 import { useEffect, useState } from "react";
-import TestCreator from "@/Components/TestCreator";
+import TestCreator from "../../Components/TestCreator";
 import { useRouter } from "next/navigation";
 import { httpsCallable } from "firebase/functions";
-import { functions } from "@/config/firebase";
-import SendInvite from "@/Components/SendInvite";
-import TestsList from "@/Components/TestsList";
+import { functions } from "../../config/firebase";
+import SendInvite from "../../Components/SendInvite";
+import TestsList from "../../Components/TestsList";
 
 
 const page = () => {
