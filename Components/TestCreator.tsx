@@ -332,7 +332,7 @@ const AddTest = () => {
         {/* Dodaj pitanje */}
         <button
           onClick={handleAddQuestion}
-          className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg shadow-green-600/20"
+          className="flex items-center gap-2 bg-linear-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg shadow-green-600/20"
         >
           <Plus className="w-5 h-5" />
           <span className="font-medium">Dodaj pitanje</span>
@@ -406,7 +406,7 @@ const AddTest = () => {
         disabled={questions.length === 0}
         className={`w-full flex items-center justify-center gap-2 p-4 rounded-xl font-semibold transition-all duration-200 ${
           questions.length > 0
-            ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-600/20'
+            ? 'bg-linear-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-600/20'
             : 'bg-gray-100 text-gray-400 cursor-not-allowed'
         }`}
       >

@@ -11,15 +11,16 @@ const db = admin.firestore();
 type InviteData = {
   email: string;
   role: "student" | "instruktor" | "superadmin";
+  autoSkolaId?: string;
+  instruktorId?: string;
 };
 
 export const createInvite = onCall<InviteData>(async (request) => {
   console.log("=== createInvite funkcija pokrenuta ===");
   console.log("Request data:", request.data);
   console.log("Auth:", request.auth);
-  
+
   try {
-    // Provera autentifikacije
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Morate biti ulogovani.");
     }
@@ -29,7 +30,7 @@ export const createInvite = onCall<InviteData>(async (request) => {
 
     // Provera da li je korisnik superadmin
     const userDoc = await db.collection("users").doc(uid).get();
-    
+
     if (!userDoc.exists) {
       throw new HttpsError("permission-denied", "Korisnik ne postoji u bazi.");
     }
@@ -44,10 +45,9 @@ export const createInvite = onCall<InviteData>(async (request) => {
       );
     }
 
-    const { email, role } = request.data;
-    console.log("Email:", email, "Role:", role);
+    const { email, role, autoSkolaId, instruktorId } = request.data;
+    console.log("Email:", email, "Role:", role, "AutoSkolaId:", autoSkolaId, "InstruktorId:", instruktorId);
 
-    // Validacija podataka
     if (!email || !role) {
       throw new HttpsError("invalid-argument", "Email i rola su obavezni.");
     }
@@ -82,7 +82,7 @@ export const createInvite = onCall<InviteData>(async (request) => {
       new Date(Date.now() + 48 * 60 * 60 * 1000)
     );
 
-    // Kreiranje invite-a
+    // Kreiranje invite-a sa autoskolom i instruktorom
     const inviteData = {
       email,
       role,
@@ -91,7 +91,9 @@ export const createInvite = onCall<InviteData>(async (request) => {
       expiresAt,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       createdBy: uid,
-      createdAtHuman: new Date().toISOString()
+      createdAtHuman: new Date().toISOString(),
+      autoSkolaId: autoSkolaId || null,
+      instruktorId: instruktorId || null,
     };
 
     const inviteRef = await db.collection("invites").add(inviteData);
@@ -100,7 +102,7 @@ export const createInvite = onCall<InviteData>(async (request) => {
     // Generisanje linka (promeni URL za produkciju)
     const baseUrl = process.env.NODE_ENV === "development" 
       ? "http://localhost:3000" 
-      : "https://tvoj-domen.com"; // Zameni sa tvojim produkcija domenom
+      : "https://autoskolasampion.com"; // Zameni sa tvojim produkcija domenom
 
     const inviteLink = `${baseUrl}/register?token=${token}`;
 
@@ -112,14 +114,14 @@ export const createInvite = onCall<InviteData>(async (request) => {
       role,
       expiresAt: expiresAt.toDate().toISOString()
     };
-    
+
   } catch (error) {
     console.error("Greška u createInvite funkciji:", error);
-    
+
     if (error instanceof HttpsError) {
       throw error;
     }
-    
+
     throw new HttpsError("internal", "Došlo je do interne greške. Pokušajte ponovo.");
   }
 });

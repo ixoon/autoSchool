@@ -93,7 +93,7 @@ const TestsList = () => {
           >
             <div className="flex items-start justify-between mb-3 sm:mb-4">
               <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-linear-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
                   <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
                 <h2 className="text-base sm:text-lg font-semibold text-gray-800 group-hover:text-blue-600 transition-colors line-clamp-1">
@@ -119,7 +119,7 @@ const TestsList = () => {
                 e.stopPropagation();
                 handleStartTest(test.id);
               }}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-md shadow-blue-600/20"
+              className="w-full flex items-center justify-center gap-2 bg-linear-to-r from-blue-600 to-blue-700 text-white text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-md shadow-blue-600/20"
             >
               <Play className="w-3 h-3 sm:w-4 sm:h-4" />
               <span>Započni test</span>

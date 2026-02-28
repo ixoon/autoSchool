@@ -1,189 +1,187 @@
 'use client';
 
-import { useState } from "react";
-import { httpsCallable } from "firebase/functions";
-import { functions } from "../lib/firebase";
+import { useEffect, useState } from 'react';
+import { db } from '@/lib/firebase';
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  getDocs,
+} from 'firebase/firestore';
 
-type Props = {
-  onSuccess?: () => void;
-};
+type Role = 'student' | 'instruktor' | 'superadmin';
 
-const SendInvite: React.FC<Props> = ({ onSuccess }) => {
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"student" | "instruktor" | "superadmin">("student");
-  const [sending, setSending] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [inviteLink, setInviteLink] = useState("");
+export default function SendInvite() {
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<Role>('student');
+
+  const [autoSkole, setAutoSkole] = useState<any[]>([]);
+  const [instruktori, setInstruktori] = useState<any[]>([]);
+  const [filteredInstruktori, setFilteredInstruktori] = useState<any[]>([]);
+
+  const [autoSkolaId, setAutoSkolaId] = useState('');
+  const [instruktorId, setInstruktorId] = useState('');
+
+  const [imePrezime, setImePrezime] = useState('');
+  const [godine, setGodine] = useState('');
+
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  // Ucitavanje autoskola i instruktora
+  useEffect(() => {
+    const fetchData = async () => {
+      const autoSnap = await getDocs(collection(db, 'AutoSkole'));
+      const instrSnap = await getDocs(collection(db, 'Instruktori'));
+
+      setAutoSkole(autoSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setInstruktori(instrSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+    };
+
+    fetchData();
+  }, []);
+
+  // filtriranje instruktora po autoskoli
+  useEffect(() => {
+    if (!autoSkolaId) {
+      setFilteredInstruktori([]);
+      return;
+    }
+
+    const filtered = instruktori.filter(
+      (i) => i.autoSkolaId === autoSkolaId
+    );
+    setFilteredInstruktori(filtered);
+  }, [autoSkolaId, instruktori]);
+
+  const generateToken = () =>
+    Math.random().toString(36).substring(2) +
+    Math.random().toString(36).substring(2);
 
   const handleSendInvite = async () => {
-    // Resetovanje poruka
-    setMessage("");
-    setError("");
-    setInviteLink("");
-    
-    console.log("Slanje pozivnice za:", inviteEmail, "sa rolom:", inviteRole);
-    
-    // Validacija email-a
-    if (!inviteEmail) {
-      setError("Unesite email adresu.");
-      return;
+  try {
+    setError('');
+    setMessage('');
+
+    if (!email) return setError('Unesite email');
+
+    if (role === 'student' && (!autoSkolaId || !instruktorId)) {
+      return setError('Izaberite autoskolu i instruktora');
     }
 
-    // Basic email validacija
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(inviteEmail)) {
-      setError("Unesite ispravnu email adresu.");
-      return;
+    if (role === 'instruktor' && !autoSkolaId) {
+      return setError('Izaberite autoskolu');
     }
 
-    setSending(true);
+    const token = generateToken();
+    const expires = new Date();
+    expires.setDate(expires.getDate() + 7);
 
-    try {
-      // Pravljenje referenca ka funkciji
-      const createInvite = httpsCallable(functions, "createInvite");
-      
-      console.log("Pozivanje funkcije createInvite...");
-      
-      // Pozivanje funkcije
-      const result = await createInvite({ 
-        email: inviteEmail, 
-        role: inviteRole 
-      });
-      
-      console.log("Odgovor od funkcije:", result);
-      
-      // Tipizacija odgovora
-      const responseData = result.data as {
-        success: boolean;
-        inviteLink: string;
-        email: string;
-        role: string;
-        expiresAt: string;
-      };
-      
-      // Prikazivanje uspešne poruke
-      setMessage(`Pozivnica uspešno kreirana za ${responseData.email}`);
-      setInviteLink(responseData.inviteLink);
-      
-      // Resetovanje forme
-      setInviteEmail("");
-      setInviteRole("student");
-      
-      // Pozivanje callback-a ako postoji
-      if (onSuccess) {
-        onSuccess();
-      }
-      
-    } catch (err: any) {
-      console.error("Greška pri slanju pozivnice:");
-      console.error("Code:", err.code);
-      console.error("Message:", err.message);
-      console.error("Details:", err.details);
-      
-      // Prikazivanje odgovarajuće greške
-      if (err.code === "functions/unauthenticated") {
-        setError("Niste ulogovani. Molimo prijavite se.");
-      } else if (err.code === "functions/permission-denied") {
-        setError("Nemate dozvolu za slanje pozivnica. Potrebna je superadmin rola.");
-      } else if (err.code === "functions/invalid-argument") {
-        setError("Neispravni podaci. Proverite email i rolu.");
-      } else if (err.code === "functions/already-exists") {
-        setError("Korisnik sa ovim email-om već postoji ili ima aktivnu pozivnicu.");
-      } else {
-        setError(err.message || "Došlo je do greške prilikom slanja pozivnice.");
-      }
-    } finally {
-      setSending(false);
-    }
-  };
+    await addDoc(collection(db, 'invites'), {
+      email,
+      role,
+      token,
+      used: false,
+      expiresAt: expires,
+      createdAt: serverTimestamp(),
+      autoSkolaId: autoSkolaId || null,
+      instruktorId: instruktorId || null,
+    });
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(inviteLink);
-    alert("Link kopiran u clipboard!");
-  };
+    const link = `${window.location.origin}/register?token=${token}`;
+
+    // kopiraj u clipboard
+    await navigator.clipboard.writeText(link);
+
+    setMessage(`Link kopiran: ${link}`);
+
+  } catch (err: any) {
+    setError('Greška: ' + err.message);
+  }
+};
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-6 max-w-xl">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">
-        Slanje pozivnice
-      </h3>
+    <div className="space-y-4">
+      <input
+        type="email"
+        placeholder="Email"
+        className="w-full border p-2 rounded"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Email adresa
-        </label>
-        <input
-          type="email"
-          placeholder="npr. instruktor@gmail.com"
-          value={inviteEmail}
-          onChange={(e) => setInviteEmail(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-          disabled={sending}
-        />
-      </div>
+      <select
+        className="w-full border p-2 rounded"
+        value={role}
+        onChange={(e) => setRole(e.target.value as Role)}
+      >
+        <option value="student">Student</option>
+        <option value="instruktor">Instruktor</option>
+        <option value="superadmin">Superadmin</option>
+      </select>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Rola korisnika
-        </label>
+      {(role === 'student' || role === 'instruktor') && (
         <select
-          value={inviteRole}
-          onChange={(e) => setInviteRole(e.target.value as any)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-          disabled={sending}
+          className="w-full border p-2 rounded"
+          value={autoSkolaId}
+          onChange={(e) => setAutoSkolaId(e.target.value)}
         >
-          <option value="student">Student</option>
-          <option value="instruktor">Instruktor</option>
-          <option value="superadmin">Super Admin</option>
+          <option value="">Izaberi autoskolu</option>
+          {autoSkole.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.naziv} - {a.mesto}
+            </option>
+          ))}
         </select>
-      </div>
+      )}
+
+      {role === 'student' && (
+        <select
+          className="w-full border p-2 rounded"
+          value={instruktorId}
+          onChange={(e) => setInstruktorId(e.target.value)}
+          disabled={!autoSkolaId}
+        >
+          <option value="">Izaberi instruktora</option>
+          {filteredInstruktori.map((i) => (
+            <option key={i.id} value={i.id}>
+              {i.fullName}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {(role === 'student' || role === 'instruktor') && (
+        <>
+          <input
+            type="text"
+            placeholder="Ime i prezime"
+            className="w-full border p-2 rounded"
+            value={imePrezime}
+            onChange={(e) => setImePrezime(e.target.value)}
+          />
+
+          {role === 'instruktor' && (
+            <input
+              type="number"
+              placeholder="Godine"
+              className="w-full border p-2 rounded"
+              value={godine}
+              onChange={(e) => setGodine(e.target.value)}
+            />
+          )}
+        </>
+      )}
 
       <button
         onClick={handleSendInvite}
-        disabled={sending}
-        className="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+        className="w-full bg-blue-600 text-white py-2 rounded-lg"
       >
-        {sending ? (
-          <>
-            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Slanje pozivnice...
-          </>
-        ) : "Pošalji pozivnicu"}
+        Pošalji pozivnicu
       </button>
 
-      {message && (
-        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-green-700 text-sm font-medium">{message}</p>
-          {inviteLink && (
-            <div className="mt-2 flex items-center gap-2">
-              <input
-                type="text"
-                value={inviteLink}
-                readOnly
-                className="flex-1 text-xs bg-white border border-gray-300 rounded px-2 py-1"
-              />
-              <button
-                onClick={copyToClipboard}
-                className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded border"
-              >
-                Kopiraj
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {error && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-600 text-sm">{error}</p>
-        </div>
-      )}
+      {message && <p className="text-green-600">{message}</p>}
+      {error && <p className="text-red-600">{error}</p>}
     </div>
   );
-};
-
-export default SendInvite;
+}

@@ -5,6 +5,7 @@ import { sendEmailVerification, signInWithEmailAndPassword, signOut } from 'fire
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react'
 import { doc, getDoc } from 'firebase/firestore';
+import LoginProtection from '@/Components/LoginProtection';
 
 const Page = () => {
     const [email, setEmail] = useState("");
@@ -71,6 +72,7 @@ const Page = () => {
     }
 
   return (
+    <LoginProtection>
     <div className="min-h-screen flex items-center justify-center">
       <div className="w-full max-w-md flex flex-col gap-6 shadow-2xl border-2 border-gray-300 rounded-xl p-10">
         
@@ -122,6 +124,7 @@ const Page = () => {
         </p>
       </div>
     </div>
+    </LoginProtection>
   )
 }
 

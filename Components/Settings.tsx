@@ -3,7 +3,7 @@ import React, {useState, useEffect} from 'react'
 import { User, Mail, Shield, Lock, Trash2, KeyRound } from 'lucide-react'
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, deleteUser, onAuthStateChanged, updatePassword } from 'firebase/auth'
 import { db } from '../lib/firebase'
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
+import { collection, getDocs, deleteDoc, doc, getDoc } from 'firebase/firestore';
 
 const Settings = () => {
     const [currentPassword, setCurrentPassword] = useState("");
@@ -23,12 +23,41 @@ const Settings = () => {
                 setCurrentUser({
                     email: user.email,
                     uid: user.uid,
-                    fullName: user.displayName
+                    fullName: user.displayName,
                 })
             }
         });
         return () => unsubscribe();
     }, [])
+
+    useEffect(() => {
+    const fetchUserRole = async () => {
+        if (!currentUser?.uid) return; // Koristite uid umesto emaila
+
+        try {
+            // Direktno čitanje dokumenta sa UID-om
+            const userDocRef = doc(db, "users", currentUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            
+            if (userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                setCurrentUser((prev: any) => ({
+                    ...prev,
+                    role: userData.role || "N/A"
+                }));
+            } else {
+                console.log("Dokument ne postoji");
+                setCurrentUser((prev: any) => ({
+                    ...prev,
+                    role: "N/A"
+                }));
+            }
+        } catch (err) {
+            console.error("Greška pri dohvatanju role:", err);
+        }
+    }
+    fetchUserRole();
+}, [currentUser?.uid]); // Zavisnost od uid-a
 
     const handlePasswordChange = async () => {
         // Resetuj SVE poruke
@@ -187,8 +216,8 @@ const Settings = () => {
                                     <div>
                                         <p className="text-sm text-gray-500">Uloga</p>
                                         <div className="flex items-center space-x-2">
-                                            <p className="font-medium">Instruktor</p>
-                                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">Instruktor</span>
+                                            <p className="font-medium">{currentUser?.role || "N/A"}</p>
+                                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">{currentUser?.role || "N/A"}</span>
                                         </div>
                                     </div>
                                 </div>

@@ -117,10 +117,10 @@ function RegisterForm() {
           }
         } else if (inviteData.role === "instruktor") {
           const instruktorCheck = await getDocs(
-            query(collection(db, "instruktori"), where("email", "==", inviteData.email))
+            query(collection(db, "Instruktori"), where("email", "==", inviteData.email))
           );
           if (!instruktorCheck.empty) {
-            addDebug(`Upozorenje: Instruktor već postoji u instruktori kolekciji, ali ne u users`);
+            addDebug(`Upozorenje: Instruktor već postoji u Instruktori kolekciji, ali ne u users`);
           }
         }
 
@@ -142,258 +142,74 @@ function RegisterForm() {
   }, [token]);
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setDebugInfo([]);
+  e.preventDefault();
+  setError("");
 
-    // Validacija
-    if (!fullName.trim()) {
-      setError("Unesite ime i prezime.");
-      return;
-    }
+  if (!fullName.trim()) return setError("Unesite ime i prezime.");
+  if (password.length < 6) return setError("Lozinka mora imati 6+ karaktera.");
+  if (password !== confirmPassword) return setError("Lozinke se ne poklapaju.");
+  if (!role || !inviteDocId || !inviteData) return setError("Greška sa pozivnicom.");
 
-    if (password.length < 6) {
-      setError("Lozinka mora imati najmanje 6 karaktera.");
-      return;
-    }
+  setRegistering(true);
 
-    if (password !== confirmPassword) {
-      setError("Lozinke se ne poklapaju.");
-      return;
-    }
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const user = cred.user;
+    await sendEmailVerification(user);
 
-    if (!role || !inviteDocId) {
-      setError("Došlo je do greške. Osvežite stranicu.");
-      return;
-    }
+    const batch = writeBatch(db);
 
-    setRegistering(true);
+    // USERS
+    batch.set(doc(db, "users", user.uid), {
+      fullName,
+      email,
+      role,
+      createdAt: serverTimestamp(),
+    });
 
-    try {
-      addDebug(`Započinjem registraciju za: ${email} sa rolom: ${role}`);
-      
-      // KORAK 1: Kreiranje naloga u Firebase Auth
-      addDebug("Kreiranje naloga u Firebase Auth...");
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
-      const user = cred.user;
-      addDebug(`Nalog kreiran sa UID: ${user.uid}`);
+    if (role === "student") {
+      if (!inviteData.autoSkolaId || !inviteData.instruktorId) {
+        throw new Error("Student mora imati autoskolu i instruktora.");
+      }
 
-      // KORAK 2: Slanje email verifikacije
-      addDebug("Slanje email verifikacije...");
-      await sendEmailVerification(user);
-      addDebug("Email za verifikaciju poslat");
-
-      // KORAK 3: Priprema podataka
-      const normalizedRole = role.trim().toLowerCase();
-      const now = new Date();
-      
-      // Osnovni podaci za sve kolekcije
-      const baseUserData = {
-        fullName: fullName.trim(),
+      batch.set(doc(db, "studenti", user.uid), {
+        fullName,
         email,
-        role: normalizedRole,
+        autoSkolaId: inviteData.autoSkolaId,
+        instruktorId: inviteData.instruktorId,
         createdAt: serverTimestamp(),
-        createdAtHuman: now.toISOString(),
-        emailVerified: false,
-        uid: user.uid,
-        status: "aktivan",
-        lastLogin: null,
-        updatedAt: serverTimestamp()
-      };
-
-      // KORAK 4: Korišćenje batch-a za sve Firestore operacije
-      const batch = writeBatch(db);
-
-      // 4.1 Kreiranje u users kolekciji (UVEK)
-      const userRef = doc(db, "users", user.uid);
-      batch.set(userRef, baseUserData);
-      addDebug("Pripremljen dokument za users kolekciju");
-
-      // 4.2 Kreiranje u specifičnoj kolekciji prema roli
-      if (normalizedRole === "student") {
-        // Provera da li već postoji u studenti kolekciji
-        const studentQuery = query(
-          collection(db, "studenti"), 
-          where("email", "==", email)
-        );
-        const studentSnapshot = await getDocs(studentQuery);
-        
-        if (!studentSnapshot.empty) {
-          addDebug(`Student već postoji u studenti kolekciji, ažuriram...`);
-          // Ažuriraj postojeći dokument
-          const existingStudent = studentSnapshot.docs[0];
-          batch.update(doc(db, "studenti", existingStudent.id), {
-            ...baseUserData,
-            userId: user.uid,
-            updatedAt: serverTimestamp()
-          });
-        } else {
-          // Kreiraj novi dokument
-          const studentData = {
-            ...baseUserData,
-            // Student specifična polja
-            kategorija: "", // Biće popunjeno kasnije
-            instruktorId: null,
-            instruktorIme: null,
-            brojTelefona: "",
-            adresa: "",
-            datumRodjenja: null,
-            brojPokusaja: 0,
-            polozenTeorija: false,
-            polozenPrakticni: false,
-            prijavljeniTestovi: [],
-            rezultati: [],
-            // Veza ka users dokumentu
-            userId: user.uid,
-            userRef: `/users/${user.uid}`
-          };
-          
-          const studentRef = doc(db, "studenti", user.uid);
-          batch.set(studentRef, studentData);
-        }
-        addDebug("Pripremljen dokument za studenti kolekciju");
-
-      } else if (normalizedRole === "instruktor") {
-        // Provera da li već postoji u instruktori kolekciji
-        const instruktorQuery = query(
-          collection(db, "instruktori"), 
-          where("email", "==", email)
-        );
-        const instruktorSnapshot = await getDocs(instruktorQuery);
-        
-        if (!instruktorSnapshot.empty) {
-          addDebug(`Instruktor već postoji u instruktori kolekciji, ažuriram...`);
-          const existingInstruktor = instruktorSnapshot.docs[0];
-          batch.update(doc(db, "instruktori", existingInstruktor.id), {
-            ...baseUserData,
-            userId: user.uid,
-            updatedAt: serverTimestamp()
-          });
-        } else {
-          // Instruktor specifična polja
-          const instruktorData = {
-            ...baseUserData,
-            specijalizacija: [], // Npr. ["B kategorija", "C kategorija"]
-            brojTelefona: "",
-            grad: "",
-            dostupan: true,
-            brojStudenata: 0,
-            listaStudenata: [], // IDs studenata
-            iskustvo: "",
-            biografija: "",
-            // Veza ka users dokumentu
-            userId: user.uid,
-            userRef: `/users/${user.uid}`
-          };
-          
-          const instruktorRef = doc(db, "instruktori", user.uid);
-          batch.set(instruktorRef, instruktorData);
-        }
-        addDebug("Pripremljen dokument za instruktori kolekciju");
-
-      } else if (normalizedRole === "superadmin") {
-        // Provera da li već postoji u admini kolekciji
-        const adminQuery = query(
-          collection(db, "admini"), 
-          where("email", "==", email)
-        );
-        const adminSnapshot = await getDocs(adminQuery);
-        
-        if (!adminSnapshot.empty) {
-          addDebug(`Admin već postoji u admini kolekciji, ažuriram...`);
-          const existingAdmin = adminSnapshot.docs[0];
-          batch.update(doc(db, "admini", existingAdmin.id), {
-            ...baseUserData,
-            userId: user.uid,
-            updatedAt: serverTimestamp()
-          });
-        } else {
-          // Admin specifična polja
-          const adminData = {
-            ...baseUserData,
-            nivoPristupa: "pun",
-            permissions: ["all"],
-            lastLogin: null,
-            // Veza ka users dokumentu
-            userId: user.uid,
-            userRef: `/users/${user.uid}`
-          };
-          
-          const adminRef = doc(db, "admini", user.uid);
-          batch.set(adminRef, adminData);
-        }
-        addDebug("Pripremljen dokument za admini kolekciju");
-      }
-
-      // 4.3 Obeležavanje invite-a kao iskorišćenog
-      const inviteRef = doc(db, "invites", inviteDocId);
-      batch.update(inviteRef, {
-        used: true,
-        usedAt: serverTimestamp(),
-        usedBy: user.uid,
-        usedAtHuman: now.toISOString(),
-        registeredRole: normalizedRole,
-        registeredFullName: fullName.trim()
       });
-      addDebug("Pripremljeno ažuriranje invite-a");
-
-      // KORAK 5: Izvršavanje batch operacije
-      await batch.commit();
-      addDebug("Sve Firestore operacije uspešno izvršene!");
-
-      // KORAK 6: Dodatne provere nakon registracije
-      addDebug("Provera uspešnosti upisa...");
-      
-      // Provera users kolekcije
-      const userCheck = await getDoc(doc(db, "users", user.uid));
-      if (userCheck.exists()) {
-        addDebug(`✓ Users kolekcija: Dokument postoji sa rolom: ${userCheck.data()?.role}`);
-      } else {
-        addDebug(`✗ Users kolekcija: Dokument NE postoji!`);
-      }
-
-      // Provera specifične kolekcije
-      if (normalizedRole === "student") {
-        const studentCheck = await getDoc(doc(db, "studenti", user.uid));
-        if (studentCheck.exists()) {
-          addDebug(`✓ Studenti kolekcija: Dokument postoji`);
-        } else {
-          addDebug(`✗ Studenti kolekcija: Dokument NE postoji!`);
-        }
-      } else if (normalizedRole === "instruktor") {
-        const instruktorCheck = await getDoc(doc(db, "instruktori", user.uid));
-        if (instruktorCheck.exists()) {
-          addDebug(`✓ Instruktori kolekcija: Dokument postoji`);
-        } else {
-          addDebug(`✗ Instruktori kolekcija: Dokument NE postoji!`);
-        }
-      }
-
-      addDebug("🎉 Registracija uspešno završena!");
-      setSuccess(true);
-      
-      // Preusmeravanje nakon 3 sekunde
-      setTimeout(() => {
-        router.push("/login?registered=true");
-      }, 3000);
-
-    } catch (err: any) {
-      console.error("Greška pri registraciji:", err);
-      addDebug(`❌ Greška: ${err.message}`);
-      
-      if (err.code === "auth/email-already-in-use") {
-        setError("Email adresa je već u upotrebi.");
-      } else if (err.code === "auth/weak-password") {
-        setError("Lozinka je previše slaba.");
-      } else if (err.code === "auth/network-request-failed") {
-        setError("Mrežna greška. Proverite internet konekciju.");
-      } else {
-        setError("Došlo je do greške prilikom registracije. Pokušajte ponovo.");
-      }
-    } finally {
-      setRegistering(false);
     }
-  };
+
+    if (role === "instruktor") {
+      if (!inviteData.autoSkolaId) {
+        throw new Error("Instruktor mora imati autoskolu.");
+      }
+
+      batch.set(doc(db, "Instruktori", user.uid), {
+        fullName,
+        email,
+        autoSkolaId: inviteData.autoSkolaId,
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    batch.update(doc(db, "invites", inviteDocId), {
+      used: true,
+      usedBy: user.uid,
+      usedAt: serverTimestamp(),
+    });
+
+    await batch.commit();
+    setSuccess(true);
+
+    setTimeout(() => router.push("/login"), 3000);
+  } catch (err: any) {
+    setError(err.message || "Greška pri registraciji.");
+  } finally {
+    setRegistering(false);
+  }
+};
 
   if (loading) {
     return (
