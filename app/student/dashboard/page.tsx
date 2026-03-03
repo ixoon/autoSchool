@@ -5,7 +5,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import Protected from '../../../Components/Protected';
 import React, { useEffect, useState } from 'react';
-import { Car, CarFront, Users, Settings, LogOut, Loader2 } from 'lucide-react';
+import { Car, CarFront, Users, Settings, LogOut, Loader2, Calendar, User } from 'lucide-react';
 import Settings2 from '../../../Components/Settings';
 import { getDocs, collection, query, where, doc, getDoc } from 'firebase/firestore';
 import TestsList from '../../../Components/TestsList';
@@ -15,11 +15,46 @@ const StudentDashboard = () => {
   const [activeSection, setActiveSection] = useState<"Pocetna" | "Podesavanja">("Pocetna");
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [studentData, setStudentData] = useState<any>(null);
+  const [instructorData, setInstructorData] = useState<any>(null);
+  const [thisWeekLessons, setThisWeekLessons] = useState<any[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
 
   const router = useRouter();
+
+  // Funkcija za formatiranje datuma i vremena
+  const formatDateTime = (date: string, startTime: string, endTime: string) => {
+    const options: Intl.DateTimeFormatOptions = { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric'
+    };
+    const formattedDate = new Date(date).toLocaleDateString('sr-RS', options);
+    return `${formattedDate} od ${startTime} do ${endTime}`;
+  };
+
+  // Funkcija za dobijanje dana u nedelji
+  const getWeekDays = () => {
+    const now = new Date();
+    const currentDay = now.getDay(); // 0 je nedelja, 1 ponedeljak...
+    
+    // Podesi da nedelja bude 7 za lakše računanje
+    const day = currentDay === 0 ? 7 : currentDay;
+    
+    // Početak nedelje (ponedeljak)
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (day - 1));
+    monday.setHours(0, 0, 0, 0);
+    
+    // Kraj nedelje (nedelja)
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+    
+    return { monday, sunday };
+  };
 
   // Praćenje auth stanja
   useEffect(() => {
@@ -31,7 +66,6 @@ const StudentDashboard = () => {
           fullName: user.displayName
         });
       } else {
-        // Ako nema usera, redirect na login
         router.push('/');
       }
     });
@@ -48,7 +82,7 @@ const StudentDashboard = () => {
       setError("");
 
       try {
-        // Prvo proveri u users kolekciji (generalni podaci)
+        // Prvo proveri u users kolekciji
         const userRef = doc(db, "users", currentUser.uid);
         const userSnap = await getDoc(userRef);
         
@@ -61,7 +95,7 @@ const StudentDashboard = () => {
           };
         }
 
-        // Onda proveri u studenti kolekciji (specifični podaci za studente)
+        // Onda proveri u studenti kolekciji
         const q = query(
           collection(db, "studenti"), 
           where("email", "==", currentUser.email)
@@ -71,13 +105,14 @@ const StudentDashboard = () => {
 
         if (!snapshot.empty) {
           const studentDoc = snapshot.docs[0];
-          setStudentData({
+          const studentDataFromDb = {
             id: studentDoc.id,
             ...studentDoc.data(),
-            ...studentInfo // Spoji sa podacima iz users kolekcije
-          });
+            ...studentInfo
+          };
+          
+          setStudentData(studentDataFromDb);
         } else {
-          // Ako nema u studenti kolekciji, koristi podatke iz users
           if (Object.keys(studentInfo).length > 0) {
             setStudentData(studentInfo);
           } else {
@@ -94,6 +129,78 @@ const StudentDashboard = () => {
 
     fetchStudentData();
   }, [currentUser]);
+
+  // Fetchovanje podataka o instruktoru iz kolekcije Instruktori
+  useEffect(() => {
+    const fetchInstructorData = async () => {
+      if (!studentData?.instruktorId) return;
+
+      try {
+        // Direktno čitanje instruktora po ID-ju iz kolekcije "Instruktori"
+        const instructorRef = doc(db, "Instruktori", studentData.instruktorId);
+        const instructorSnap = await getDoc(instructorRef);
+        
+        if (instructorSnap.exists()) {
+          setInstructorData({
+            id: instructorSnap.id,
+            ...instructorSnap.data()
+          });
+        }
+      } catch (err) {
+        console.error("Greška pri učitavanju instruktora:", err);
+      }
+    };
+
+    fetchInstructorData();
+  }, [studentData]);
+
+  // Fetchovanje rasporeda časova za ovu nedelju iz kolekcije lessons
+  useEffect(() => {
+    const fetchThisWeekLessons = async () => {
+      if (!studentData?.id) return;
+
+      try {
+        const { monday, sunday } = getWeekDays();
+        
+        // Formatiranje datuma za poređenje (pošto je u bazi string "YYYY-MM-DD")
+        const mondayStr = monday.toISOString().split('T')[0];
+        const sundayStr = sunday.toISOString().split('T')[0];
+        
+        // Preuzimanje svih časova za studenta
+        const lessonsQuery = query(
+          collection(db, "lessons"),
+          where("studentId", "==", studentData.id)
+        );
+
+        const lessonsSnapshot = await getDocs(lessonsQuery);
+        const allLessons = lessonsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        // Filtriranje za ovu nedelju (pošto je date string)
+        const filteredLessons = allLessons.filter((lesson: any) => {
+          return lesson.date >= mondayStr && lesson.date <= sundayStr;
+        });
+
+        // Sortiranje po datumu i vremenu
+        filteredLessons.sort((a: any, b: any) => {
+          if (a.date === b.date) {
+            return a.startTime.localeCompare(b.startTime);
+          }
+          return a.date.localeCompare(b.date);
+        });
+
+        setThisWeekLessons(filteredLessons);
+      } catch (err) {
+        console.error("Greška pri učitavanju rasporeda:", err);
+      }
+    };
+
+    if (studentData?.id) {
+      fetchThisWeekLessons();
+    }
+  }, [studentData]);
 
   const logout = async () => {
     setLoggingOut(true);
@@ -159,15 +266,53 @@ const StudentDashboard = () => {
                       <p className="font-medium">{studentData.kategorija}</p>
                     </div>
                   )}
-                  {studentData.instruktor && (
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-600">Instruktor</p>
-                      <p className="font-medium">{studentData.instruktor}</p>
-                    </div>
+                </div>
+              </div>
+            )}
+
+            {/* Instruktor kartica */}
+            {instructorData && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <User className="h-5 w-5 text-blue-600" />
+                  <h3 className="text-lg font-semibold text-gray-800">Tvoj instruktor</h3>
+                </div>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <p className="font-medium text-gray-800">{instructorData.fullName}</p>
+                  <p className="text-sm text-gray-600 mt-1">{instructorData.email}</p>
+                  {instructorData.godine && (
+                    <p className="text-sm text-gray-600 mt-1">Godine: {instructorData.godine}</p>
                   )}
                 </div>
               </div>
             )}
+
+            {/* Raspored časova za ovu nedelju */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Calendar className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-800">Raspored časova - ova nedelja</h3>
+              </div>
+              
+              {thisWeekLessons.length > 0 ? (
+                <div className="space-y-3">
+                  {thisWeekLessons.map((lesson: any) => (
+                    <div key={lesson.id} className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
+                      <p className="font-medium text-gray-800">
+                        {formatDateTime(lesson.date, lesson.startTime, lesson.endTime)}
+                      </p>
+                      <div className="flex items-center mt-2 text-sm text-gray-600">
+                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
+                          Čas vožnje
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">Nema zakazanih časova za ovu nedelju.</p>
+              )}
+            </div>
 
             {/* Testovi sekcija */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

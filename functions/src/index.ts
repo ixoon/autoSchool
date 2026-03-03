@@ -2,7 +2,6 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { randomBytes } from "crypto";
 
-// Inicijalizacija Admin SDK-a
 if (admin.apps.length === 0) {
   admin.initializeApp();
 }
@@ -13,56 +12,76 @@ type InviteData = {
   role: "student" | "instruktor" | "superadmin";
   autoSkolaId?: string;
   instruktorId?: string;
+  imePrezime?: string;
+  godine?: number;
 };
 
 export const createInvite = onCall<InviteData>(async (request) => {
-  console.log("=== createInvite funkcija pokrenuta ===");
-  console.log("Request data:", request.data);
-  console.log("Auth:", request.auth);
+  // LOG 1: Početak
+  console.log("========== CREATE INVITE POZVAN ==========");
+  console.log("1️⃣ Vreme:", new Date().toISOString());
+  console.log("2️⃣ Auth:", request.auth ? `UID: ${request.auth.uid}` : "Nema auth");
+  console.log("3️⃣ Celokupni request.data:", JSON.stringify(request.data, null, 2));
 
   try {
+    // Auth provere
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Morate biti ulogovani.");
     }
 
     const uid = request.auth.uid;
-    console.log("UID korisnika:", uid);
-
-    // Provera da li je korisnik superadmin
+    
+    // Provera superadmin
     const userDoc = await db.collection("users").doc(uid).get();
-
-    if (!userDoc.exists) {
-      throw new HttpsError("permission-denied", "Korisnik ne postoji u bazi.");
+    if (!userDoc.exists || userDoc.data()?.role !== "superadmin") {
+      throw new HttpsError("permission-denied", "Samo superadmin može slati pozivnice.");
     }
 
-    const userData = userDoc.data();
-    console.log("User data:", userData);
-
-    if (userData?.role !== "superadmin") {
-      throw new HttpsError(
-        "permission-denied",
-        `Samo superadmin može slati pozivnice. Vaša rola: ${userData?.role || 'nema role'}`
-      );
-    }
-
-    const { email, role, autoSkolaId, instruktorId } = request.data;
-    console.log("Email:", email, "Role:", role, "AutoSkolaId:", autoSkolaId, "InstruktorId:", instruktorId);
+    // Izdvajamo podatke
+    const { email, role, autoSkolaId, instruktorId, imePrezime, godine } = request.data;
+    
+    // LOG 2: Šta smo dobili
+    console.log("4️⃣ Email:", email);
+    console.log("5️⃣ Role:", role);
+    console.log("6️⃣ autoSkolaId PRIMLJEN:", autoSkolaId);
+    console.log("7️⃣ Tip autoSkolaId:", typeof autoSkolaId);
+    console.log("8️⃣ instruktorId:", instruktorId);
+    console.log("9️⃣ imePrezime:", imePrezime);
+    console.log("🔟 godine:", godine);
 
     if (!email || !role) {
       throw new HttpsError("invalid-argument", "Email i rola su obavezni.");
     }
 
-    if (!["student", "instruktor", "superadmin"].includes(role)) {
-      throw new HttpsError("invalid-argument", "Neispravna rola.");
+    // SPECIFIČNE PROVERE
+    if (role === "instruktor") {
+      console.log("🔍 Provera za instruktora - autoSkolaId:", autoSkolaId);
+      
+      if (!autoSkolaId) {
+        console.error("❌ INSTRUKTOR NEMA autoSkolaId!");
+        throw new HttpsError("invalid-argument", "Instruktor mora imati autoškolu.");
+      }
+      
+      if (autoSkolaId === "") {
+        console.error("❌ autoSkolaId je prazan string!");
+        throw new HttpsError("invalid-argument", "Autoškola ne može biti prazna.");
+      }
+      
+      console.log("✅ Instruktor ima autoSkolaId:", autoSkolaId);
     }
 
-    // Provera da li email već postoji
+    if (role === "student") {
+      if (!autoSkolaId || !instruktorId) {
+        throw new HttpsError("invalid-argument", "Student mora imati autoškolu i instruktora.");
+      }
+    }
+
+    // Provera duplikata
     const existingUser = await db.collection("users").where("email", "==", email).get();
     if (!existingUser.empty) {
       throw new HttpsError("already-exists", "Korisnik sa ovim email-om već postoji.");
     }
 
-    // Provera da li već postoji neiskorišćen invite za ovaj email
     const existingInvite = await db.collection("invites")
       .where("email", "==", email)
       .where("used", "==", false)
@@ -70,20 +89,19 @@ export const createInvite = onCall<InviteData>(async (request) => {
       .get();
 
     if (!existingInvite.empty) {
-      throw new HttpsError("already-exists", "Već postoji aktivna pozivnica za ovaj email.");
+      throw new HttpsError("already-exists", "Već postoji aktivna pozivnica.");
     }
 
     // Generisanje tokena
     const token = randomBytes(32).toString("hex");
-    console.log("Generisan token:", token);
-
-    // Rok trajanja (48h)
     const expiresAt = admin.firestore.Timestamp.fromDate(
       new Date(Date.now() + 48 * 60 * 60 * 1000)
     );
 
-    // Kreiranje invite-a sa autoskolom i instruktorom
-    const inviteData = {
+    // PRAVLJENJE INVITE DATA - SA LOGOVANJEM
+    console.log("📦 Pravim inviteData objekat...");
+    
+    const inviteData: any = {
       email,
       role,
       token,
@@ -92,36 +110,64 @@ export const createInvite = onCall<InviteData>(async (request) => {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       createdBy: uid,
       createdAtHuman: new Date().toISOString(),
-      autoSkolaId: autoSkolaId || null,
-      instruktorId: instruktorId || null,
     };
 
-    const inviteRef = await db.collection("invites").add(inviteData);
-    console.log("Invite kreiran sa ID:", inviteRef.id);
+    // DODAVANJE autoSkolaId - SA LOGOVANJEM
+    if (autoSkolaId) {
+      console.log("➕ Dodajem autoSkolaId u inviteData:", autoSkolaId);
+      inviteData.autoSkolaId = autoSkolaId;
+    } else {
+      console.log("⚠️ autoSkolaId nije prosleđen, ne dodajem ga");
+    }
 
-    // Generisanje linka (promeni URL za produkciju)
+    if (instruktorId) {
+      inviteData.instruktorId = instruktorId;
+    }
+
+    if (imePrezime) {
+      inviteData.imePrezime = imePrezime;
+    }
+
+    if (godine) {
+      inviteData.godine = godine;
+    }
+
+    // LOG 3: Konačan inviteData pre čuvanja
+    console.log("📦 Konačan inviteData PRE čuvanja:", JSON.stringify(inviteData, null, 2));
+
+    // Čuvanje u bazu
+    const inviteRef = await db.collection("invites").add(inviteData);
+    console.log("✅ Invite sačuvan sa ID:", inviteRef.id);
+
+    // Provera odmah posle čuvanja
+    const savedDoc = await inviteRef.get();
+    console.log("🔍 Provera sačuvanog dokumenta:", savedDoc.data());
+
+    // Generisanje linka
     const baseUrl = process.env.NODE_ENV === "development" 
       ? "http://localhost:3000" 
-      : "https://autoskolasampion.com"; // Zameni sa tvojim produkcija domenom
+      : "https://autoskolasampion.com";
 
     const inviteLink = `${baseUrl}/register?token=${token}`;
 
+    // Vraćanje odgovora
     return {
       success: true,
       inviteLink,
       inviteId: inviteRef.id,
       email,
       role,
-      expiresAt: expiresAt.toDate().toISOString()
+      autoSkolaId: autoSkolaId || null,
+      instruktorId: instruktorId || null,
+      imePrezime: imePrezime || null,
+      godine: godine || null,
     };
 
   } catch (error) {
-    console.error("Greška u createInvite funkciji:", error);
-
+    console.error("❌ GREŠKA:", error);
     if (error instanceof HttpsError) {
       throw error;
     }
-
-    throw new HttpsError("internal", "Došlo je do interne greške. Pokušajte ponovo.");
+    throw new HttpsError("internal", "Došlo je do greške.");
   }
 });

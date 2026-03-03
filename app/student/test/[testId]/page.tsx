@@ -27,6 +27,9 @@ export default function TestRunner() {
   const [finished, setFinished] = useState(false);
   const [score, setScore] = useState(0);
 
+  // ⏱️ 45 minuta = 2700 sekundi
+  const [timeLeft, setTimeLeft] = useState(2700);
+
   useEffect(() => {
     const fetchTest = async () => {
       if (!testId) return;
@@ -39,6 +42,24 @@ export default function TestRunner() {
     };
     fetchTest();
   }, [testId]);
+
+  // ⏳ Tajmer
+  useEffect(() => {
+    if (finished) return;
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          finishTest();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [finished]);
 
   if (!test) return <p className="p-6">Učitavanje testa...</p>;
 
@@ -65,104 +86,133 @@ export default function TestRunner() {
   };
 
   const finishTest = async () => {
-  let total = 0;
+    if (!test) return;
 
-  test.questions.forEach((q, i) => {
-    const selected = answers[i].sort().join(',');
-    const correct = q.correctOptions.sort().join(',');
-    if (selected === correct) {
-      total += q.points;
-    }
-  });
+    let total = 0;
 
-  setScore(total);
-  setFinished(true);
-
-  // 🔥 Snimi rezultat testa
-  try {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const now = Timestamp.now();
-    const expiresAt = Timestamp.fromDate(
-      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    );
-
-    await addDoc(collection(db, 'testHistory'), {
-      userId: user.uid,
-      testId: testId,
-      answers: answers.map(a => ({ selected: a })),
-      score: total,
-      totalPoints: test.questions.reduce((sum, q) => sum + q.points, 0),
-      createdAt: now,
-      expiresAt,
+    test.questions.forEach((q, i) => {
+      const selected = answers[i].sort().join(',');
+      const correct = q.correctOptions.sort().join(',');
+      if (selected === correct) {
+        total += q.points;
+      }
     });
-  } catch (err) {
-    console.error('Greška pri snimanju testa:', err);
-  }
-};
+
+    setScore(total);
+    setFinished(true);
+
+    // 🔥 Snimi rezultat testa
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const now = Timestamp.now();
+      const expiresAt = Timestamp.fromDate(
+        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      );
+
+      await addDoc(collection(db, 'testHistory'), {
+        userId: user.uid,
+        testId: testId,
+        answers: answers.map(a => ({ selected: a })),
+        score: total,
+        totalPoints: test.questions.reduce((sum, q) => sum + q.points, 0),
+        createdAt: now,
+        expiresAt,
+      });
+    } catch (err) {
+      console.error('Greška pri snimanju testa:', err);
+    }
+  };
+
+  // ⏱️ format mm:ss
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
 
   if (finished) {
     const maxPoints = test.questions.reduce((sum, q) => sum + q.points, 0);
+    const percent = (score / maxPoints) * 100;
+    const passed = percent >= 85;
+
     return (
       <div className="p-6 max-w-2xl mx-auto text-center">
         <h1 className="text-3xl font-bold mb-4">Rezultat</h1>
-        <p className="text-xl">
+
+        <p className="text-xl mb-4">
           Osvojili ste <b>{score}</b> / {maxPoints} bodova
         </p>
+
+        <p className="text-lg mb-2">
+          Uspešnost: <b>{percent.toFixed(2)}%</b>
+        </p>
+
+        {passed ? (
+          <p className="text-green-600 font-semibold text-xl">
+            Čestitamo, položili ste test!
+          </p>
+        ) : (
+          <p className="text-red-600 font-semibold text-xl">
+            Nažalost, pali ste test. Potrebno je minimum 85% za prolaz.
+          </p>
+        )}
       </div>
     );
   }
 
   return (
     <Protected allowedRoles={['superadmin','instruktor', 'student']}>
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">{test.name}</h1>
+      <div className="p-6 max-w-2xl mx-auto">
+        <h1 className="text-2xl font-bold mb-4">{test.name}</h1>
 
-      <div className="mb-4 text-sm text-gray-500">
-        Pitanje {current + 1} / {test.questions.length} • {question.points} boda
+        {/* Tajmer */}
+        <div className="mb-2 text-right font-semibold text-red-600">
+          Vreme: {minutes}:{seconds.toString().padStart(2, '0')}
+        </div>
+
+        <div className="mb-4 text-sm text-gray-500">
+          Pitanje {current + 1} / {test.questions.length} • {question.points} boda
+        </div>
+
+        <h2 className="text-xl font-semibold mb-4">{question.question}</h2>
+
+        {question.imageUrl && (
+          <img
+            src={question.imageUrl}
+            alt="question"
+            className="mb-4 rounded-lg max-h-64 object-contain"
+          />
+        )}
+
+        <div className="space-y-3">
+          {question.options.map((opt, i) => (
+            <label
+              key={i}
+              className={`block border rounded-lg p-3 cursor-pointer transition ${
+                answers[current].includes(i)
+                  ? 'bg-blue-100 border-blue-400'
+                  : 'bg-white'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={answers[current].includes(i)}
+                onChange={() => toggleOption(i)}
+                className="mr-2"
+              />
+              {opt}
+            </label>
+          ))}
+        </div>
+
+        <button
+          onClick={nextQuestion}
+          className="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700"
+        >
+          {current === test.questions.length - 1
+            ? 'Završi test'
+            : 'Sledeće pitanje'}
+        </button>
       </div>
-
-      <h2 className="text-xl font-semibold mb-4">{question.question}</h2>
-
-      {question.imageUrl && (
-        <img
-          src={question.imageUrl}
-          alt="question"
-          className="mb-4 rounded-lg max-h-64 object-contain"
-        />
-      )}
-
-      <div className="space-y-3">
-        {question.options.map((opt, i) => (
-          <label
-            key={i}
-            className={`block border rounded-lg p-3 cursor-pointer transition ${
-              answers[current].includes(i)
-                ? 'bg-blue-100 border-blue-400'
-                : 'bg-white'
-            }`}
-          >
-            <input
-              type="checkbox"
-              checked={answers[current].includes(i)}
-              onChange={() => toggleOption(i)}
-              className="mr-2"
-            />
-            {opt}
-          </label>
-        ))}
-      </div>
-
-      <button
-        onClick={nextQuestion}
-        className="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700"
-      >
-        {current === test.questions.length - 1
-          ? 'Završi test'
-          : 'Sledeće pitanje'}
-      </button>
-    </div>
     </Protected>
   );
 }
