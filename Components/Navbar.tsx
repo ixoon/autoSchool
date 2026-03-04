@@ -17,36 +17,35 @@ const Navbar = () => {
   }, [])
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur-sm shadow-sm">
-      <div className="container mx-auto px-4">
+    <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/90 backdrop-blur-md shadow-sm">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 font-semibold hover:opacity-90 transition-opacity">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500">
+          <Link href="/" className="flex items-center gap-2.5 font-semibold hover:opacity-80 transition-all duration-300">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-md">
               <Car className="h-5 w-5 text-white" size={20} />
             </div>
-            <span className="text-lg">AutoŠkola Šampion</span>
+            <span className="text-lg sm:text-xl text-slate-800 tracking-tight">AutoŠkola Šampion</span>
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-6 text-sm">
-            <Link href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">O Nama</Link>
-            <Link href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">Cene</Link>
-            <Link href="#contact" className="text-gray-600 hover:text-gray-900 transition-colors">Kontakt</Link>
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
+            <Link href="#features" className="text-slate-600 hover:text-blue-600 transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all hover:after:w-full after:content-[''] pb-1">O Nama</Link>
+            <Link href="#pricing" className="text-slate-600 hover:text-blue-600 transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all hover:after:w-full after:content-[''] pb-1">Cene</Link>
+            <Link href="#contact" className="text-slate-600 hover:text-blue-600 transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all hover:after:w-full after:content-[''] pb-1">Kontakt</Link>
           </nav>
 
           {/* Desktop buttons */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-4">
             {!isLoggedIn ? (
               <>
-                <Link href="/login" className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 rounded-md transition-colors border border-gray-200 hover:bg-gray-100">
+                <Link href="/login" className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-blue-600 rounded-lg border border-slate-200 hover:border-blue-200 hover:bg-blue-50 transition-all duration-200">
                   Prijava
                 </Link>
-                {/* Registracija dugme je uklonjeno */}
               </>
             ) : (
-              <Link href="/student" className="px-4 py-2 text-sm font-bold bg-blue-500 text-white rounded-md shadow hover:bg-blue-600 transition-colors">
+              <Link href="/student" className="px-5 py-2.5 text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg shadow-md hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 transform hover:-translate-y-0.5">
                 Moj panel
               </Link>
             )}
@@ -55,35 +54,49 @@ const Navbar = () => {
           {/* Mobile toggle */}
           <button 
             aria-label="Toggle menu"
-            className="md:hidden p-2 rounded-md hover:bg-gray-100 transition-colors"
+            className="md:hidden p-2 rounded-lg hover:bg-slate-100 transition-colors duration-200"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {mobileMenuOpen ? <X className="h-6 w-6 text-slate-600" /> : <Menu className="h-6 w-6 text-slate-600" />}
           </button>
         </div>
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t bg-white shadow-sm">
+          <div className="md:hidden py-5 border-t border-slate-100 bg-white animate-fadeIn">
             <nav className="flex flex-col gap-4">
-              <Link href="#features" className="text-gray-600 hover:text-gray-900 transition-colors" onClick={() => setMobileMenuOpen(false)}>O Nama</Link>
-              <Link href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors" onClick={() => setMobileMenuOpen(false)}>Cene</Link>
-              <Link href="#contact" className="text-gray-600 hover:text-gray-900 transition-colors" onClick={() => setMobileMenuOpen(false)}>Kontakt</Link>
-              <div className="flex flex-col gap-3 mt-2">
+              <Link href="#features" className="text-slate-600 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-all duration-200" onClick={() => setMobileMenuOpen(false)}>O Nama</Link>
+              <Link href="#pricing" className="text-slate-600 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-all duration-200" onClick={() => setMobileMenuOpen(false)}>Cene</Link>
+              <Link href="#contact" className="text-slate-600 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-all duration-200" onClick={() => setMobileMenuOpen(false)}>Kontakt</Link>
+              <div className="flex flex-col gap-3 mt-2 px-3">
                 {!isLoggedIn ? (
                   <>
-                    <Link href="/login" className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors" onClick={() => setMobileMenuOpen(false)}>Prijava</Link>
-                    {/* Registracija dugme je uklonjeno */}
+                    <Link href="/login" className="px-4 py-2.5 text-sm font-medium text-center text-slate-700 hover:text-blue-600 rounded-lg border border-slate-200 hover:border-blue-200 hover:bg-blue-50 transition-all duration-200" onClick={() => setMobileMenuOpen(false)}>Prijava</Link>
                   </>
                 ) : (
-                  <Link href="/student" className="px-4 py-2 text-sm font-bold bg-blue-500 text-white rounded-md shadow hover:bg-blue-600 transition-colors" onClick={() => setMobileMenuOpen(false)}>Moj panel</Link>
+                  <Link href="/student" className="px-5 py-3 text-sm font-semibold text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg shadow-md hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200" onClick={() => setMobileMenuOpen(false)}>Moj panel</Link>
                 )}
               </div>
             </nav>
           </div>
         )}
-
       </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out;
+        }
+      `}</style>
     </header>
   )
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react'
-import { Car, CarFront, Settings, Users, CalendarDays, Plus, Clock, User, Calendar, ChevronRight, MoreVertical, X, Trash2, Edit, Check, AlertCircle } from 'lucide-react'
+import { Car, CarFront, Settings, Users, CalendarDays, Plus, Clock, User, Calendar, ChevronRight, MoreVertical, X, Trash2, Edit, Check, AlertCircle, LogOut, LayoutDashboard, Menu, Bell, Search } from 'lucide-react'
 import Protected from '../../Components/Protected'
 import Settings2 from '../../Components/Settings';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -13,6 +13,7 @@ import TestsList from '../../Components/TestsList';
 const Page = () => {
     const [activeSection, setActiveSection] = useState<"Glavna" | "Podesavanja">("Glavna");
     const [currentUser, setCurrentUser] = useState<any>(null);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // STUDENTI I CASOVI
     const [students, setStudents] = useState<any[]>([]);
@@ -178,209 +179,249 @@ const Page = () => {
             case "Glavna":
                 return (
                     <div className="max-w-7xl mx-auto">
-                        {/* HEADER */}
+                        {/* HEADER SA DOBRODOŠLICOM */}
                         <div className="mb-8">
-                            <h1 className="text-3xl font-bold text-gray-800">Dobrodošli, {currentUser?.fullName || currentUser?.email}</h1>
-                            <p className="text-gray-500 mt-1">Vaša kontrolna tabla instruktora</p>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Dobrodošli, {currentUser?.fullName || currentUser?.email}</h1>
+                                    <p className="text-sm sm:text-base text-slate-500 mt-1">Vaša kontrolna tabla instruktora</p>
+                                </div>
+                                
+                                {/* Notifikacije */}
+                                <div className="flex items-center gap-3">
+                                    <button className="p-2 sm:p-2.5 bg-white rounded-lg sm:rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors relative">
+                                        <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600" />
+                                        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full"></span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         {/* STAT CARDS */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
-                                <div className="flex justify-between items-center">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+                            <div className="group bg-white p-4 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 hover:shadow-xl transition-all duration-300 hover:border-blue-200 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-600/5 to-indigo-600/5 rounded-bl-full"></div>
+                                <div className="flex justify-between items-center relative">
                                     <div>
-                                        <p className="text-sm font-medium text-gray-500">Moji studenti</p>
-                                        <h3 className="text-3xl font-bold text-gray-800 mt-2">{students.length}</h3>
+                                        <p className="text-xs sm:text-sm font-medium text-slate-500">Moji studenti</p>
+                                        <h3 className="text-2xl sm:text-3xl font-bold text-slate-800 mt-1 sm:mt-2">{students.length}</h3>
+                                        <p className="text-[10px] sm:text-xs text-slate-400 mt-1">Aktivni studenti</p>
                                     </div>
-                                    <div className="w-12 h-12 bg-linear-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-                                        <Users className="w-6 h-6 text-white" />
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20 group-hover:scale-110 transition-transform duration-300">
+                                        <Users className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-white" />
                                     </div>
                                 </div>
-                                <div className="mt-4 text-sm text-gray-500">
-                                    <span className="text-green-500 font-semibold">+{students.length}</span> ukupno
+                                <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-100">
+                                    <span className="text-xs sm:text-sm text-slate-600">➕ Poslednji dodat: pre 2 dana</span>
                                 </div>
                             </div>
 
-                            <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
-                                <div className="flex justify-between items-center">
+                            <div className="group bg-white p-4 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 hover:shadow-xl transition-all duration-300 hover:border-green-200 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-green-600/5 to-emerald-600/5 rounded-bl-full"></div>
+                                <div className="flex justify-between items-center relative">
                                     <div>
-                                        <p className="text-sm font-medium text-gray-500">Časovi danas</p>
-                                        <h3 className="text-3xl font-bold text-gray-800 mt-2">{lessonsToday}</h3>
+                                        <p className="text-xs sm:text-sm font-medium text-slate-500">Časovi danas</p>
+                                        <h3 className="text-2xl sm:text-3xl font-bold text-slate-800 mt-1 sm:mt-2">{lessonsToday}</h3>
+                                        <p className="text-[10px] sm:text-xs text-slate-400 mt-1">
+                                            {lessonsToday > 0 ? 'Sledeći čas u 14:30' : 'Danas nema časova'}
+                                        </p>
                                     </div>
-                                    <div className="w-12 h-12 bg-linear-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-500/20">
-                                        <CalendarDays className="w-6 h-6 text-white" />
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-green-600 to-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-green-600/20 group-hover:scale-110 transition-transform duration-300">
+                                        <CalendarDays className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-white" />
                                     </div>
                                 </div>
-                                <div className="mt-4 text-sm text-gray-500">
-                                    {lessonsToday > 0 ? (
-                                        <span className="text-green-500 font-semibold">Aktivno</span>
-                                    ) : (
-                                        <span className="text-gray-400">Nema časova</span>
-                                    )}
+                                <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-100">
+                                    <span className={`text-xs sm:text-sm ${lessonsToday > 0 ? 'text-green-600' : 'text-slate-400'}`}>
+                                        {lessonsToday > 0 ? '✅ Aktivno' : '⏸️ Pauza'}
+                                    </span>
                                 </div>
                             </div>
 
-                            <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
-                                <div className="flex justify-between items-center">
+                            <div className="group bg-white p-4 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 hover:shadow-xl transition-all duration-300 hover:border-purple-200 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-purple-600/5 to-pink-600/5 rounded-bl-full"></div>
+                                <div className="flex justify-between items-center relative">
                                     <div>
-                                        <p className="text-sm font-medium text-gray-500">Časovi ove nedelje</p>
-                                        <h3 className="text-3xl font-bold text-gray-800 mt-2">{lessonsThisWeek}</h3>
+                                        <p className="text-xs sm:text-sm font-medium text-slate-500">Časovi ove nedelje</p>
+                                        <h3 className="text-2xl sm:text-3xl font-bold text-slate-800 mt-1 sm:mt-2">{lessonsThisWeek}</h3>
+                                        <p className="text-[10px] sm:text-xs text-slate-400 mt-1">Od ponedeljka do petka</p>
                                     </div>
-                                    <div className="w-12 h-12 bg-linear-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/20">
-                                        <Calendar className="w-6 h-6 text-white" />
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-purple-600/20 group-hover:scale-110 transition-transform duration-300">
+                                        <Calendar className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-white" />
                                     </div>
                                 </div>
-                                <div className="mt-4 text-sm text-gray-500">
-                                    <span className="text-purple-500 font-semibold">Nedeljni pregled</span>
+                                <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-100">
+                                    <span className="text-xs sm:text-sm text-slate-600">📊 Nedeljni pregled</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* RASPORED */}
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 mt-8 overflow-hidden">
-                            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-slate-200 mt-6 sm:mt-8 overflow-hidden">
+                            <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-slate-50 to-white">
                                 <div>
-                                    <h2 className="text-xl font-bold text-gray-800">Raspored časova</h2>
-                                    <p className="text-sm text-gray-500 mt-1">Pregled svih zakazanih časova</p>
+                                    <h2 className="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
+                                        <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                                        Raspored časova
+                                    </h2>
+                                    <p className="text-xs sm:text-sm text-slate-500 mt-1">Pregled svih zakazanih časova</p>
                                 </div>
                                 <button
                                     onClick={() => setOpenModal(true)}
-                                    className="flex items-center gap-2 bg-linear-to-r from-blue-600 to-blue-700 text-white px-5 py-2.5 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-600/20"
+                                    className="flex items-center justify-center gap-1.5 sm:gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg shadow-blue-600/20 hover:shadow-xl"
                                 >
-                                    <Plus size={18} /> 
+                                    <Plus size={16} className="sm:w-[18px] sm:h-[18px]" /> 
                                     <span>Dodaj čas</span>
                                 </button>
                             </div>
 
-                            <div className="p-6">
+                            <div className="p-4 sm:p-5 lg:p-6">
                                 {Object.keys(groupedLessons).length === 0 ? (
-                                    <div className="text-center py-12">
-                                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <Calendar className="w-8 h-8 text-gray-400" />
+                                    <div className="text-center py-12 sm:py-16">
+                                        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-slate-500" />
                                         </div>
-                                        <p className="text-gray-500 text-lg">Nema zakazanih časova</p>
-                                        <p className="text-gray-400 text-sm mt-1">Kliknite na "Dodaj čas" da zakažete prvi čas</p>
+                                        <p className="text-base sm:text-lg text-slate-600 font-medium">Nema zakazanih časova</p>
+                                        <p className="text-xs sm:text-sm text-slate-400 mt-2">Kliknite na "Dodaj čas" da zakažete prvi čas</p>
+                                        <button
+                                            onClick={() => setOpenModal(true)}
+                                            className="mt-4 sm:mt-6 inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 font-medium text-sm"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                            <span>Zakaži prvi čas</span>
+                                        </button>
                                     </div>
                                 ) : (
-                                    <div className="space-y-8">
-                                        {Object.entries(groupedLessons).map(([date, dayLessons]: [string, any]) => (
-                                            <div key={date} className="space-y-3">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                                    <h3 className="font-semibold text-gray-700">
-                                                        {new Date(date).toLocaleDateString('sr-RS', { 
-                                                            weekday: 'long', 
-                                                            year: 'numeric', 
-                                                            month: 'long', 
-                                                            day: 'numeric' 
-                                                        })}
-                                                    </h3>
-                                                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                                                        {dayLessons.length} časova
-                                                    </span>
-                                                </div>
-                                                
-                                                <div className="grid gap-3 pl-5">
-                                                    {dayLessons.map((lesson: any, i: number) => {
-                                                        const student = students.find(s => s.id === lesson.studentId);
-                                                        const isToday = lesson.date === today;
-                                                        
-                                                        return (
-                                                            <div key={lesson.id} className="relative">
-                                                                <div 
-                                                                    className={`group relative flex items-center justify-between p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-md ${
-                                                                        isToday 
-                                                                            ? 'border-blue-200 bg-blue-50/30 hover:bg-blue-50' 
-                                                                            : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'
-                                                                    }`}
-                                                                >
-                                                                    <div className="flex items-center gap-4 flex-1">
-                                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                                                                            isToday ? 'bg-blue-100' : 'bg-gray-100'
-                                                                        }`}>
-                                                                            <User className={`w-5 h-5 ${
-                                                                                isToday ? 'text-blue-600' : 'text-gray-600'
-                                                                            }`} />
-                                                                        </div>
-                                                                        
-                                                                        <div className="flex-1">
-                                                                            <p className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">
-                                                                                {student?.fullName || "Student"}
-                                                                            </p>
-                                                                            <div className="flex items-center gap-4 mt-1 text-sm">
-                                                                                <div className="flex items-center gap-1 text-gray-500">
-                                                                                    <Clock className="w-4 h-4" />
-                                                                                    <span>{lesson.startTime} - {lesson.endTime}</span>
-                                                                                </div>
-                                                                                {isToday && (
-                                                                                    <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">
-                                                                                        Danas
-                                                                                    </span>
-                                                                                )}
+                                    <div className="space-y-6 sm:space-y-8">
+                                        {Object.entries(groupedLessons).map(([date, dayLessons]: [string, any]) => {
+                                            const isToday = date === today;
+                                            const dayName = new Date(date).toLocaleDateString('sr-RS', { 
+                                                weekday: 'long', 
+                                                year: 'numeric', 
+                                                month: 'long', 
+                                                day: 'numeric' 
+                                            });
+                                            
+                                            return (
+                                                <div key={date} className="space-y-2 sm:space-y-3">
+                                                    <div className="flex items-center gap-2 sm:gap-3">
+                                                        <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${isToday ? 'bg-blue-500 animate-pulse' : 'bg-slate-300'}`}></div>
+                                                        <h3 className={`text-sm sm:text-base font-semibold ${isToday ? 'text-blue-700' : 'text-slate-700'}`}>
+                                                            {dayName}
+                                                        </h3>
+                                                        <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full ${
+                                                            isToday 
+                                                                ? 'bg-blue-100 text-blue-700' 
+                                                                : 'bg-slate-100 text-slate-600'
+                                                        }`}>
+                                                            {dayLessons.length} {dayLessons.length === 1 ? 'čas' : 'časova'}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    <div className="grid gap-2 sm:gap-3 pl-3 sm:pl-5">
+                                                        {dayLessons.map((lesson: any) => {
+                                                            const student = students.find(s => s.id === lesson.studentId);
+                                                            const isCurrentLesson = lesson.date === today;
+                                                            
+                                                            return (
+                                                                <div key={lesson.id} className="relative">
+                                                                    <div 
+                                                                        className={`group relative flex flex-col xs:flex-row xs:items-center justify-between p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 transition-all duration-200 hover:shadow-md ${
+                                                                            isCurrentLesson 
+                                                                                ? 'border-blue-200 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 hover:from-blue-50 hover:to-indigo-50' 
+                                                                                : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
+                                                                        }`}
+                                                                    >
+                                                                        <div className="flex items-center gap-3 sm:gap-4 flex-1">
+                                                                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center ${
+                                                                                isCurrentLesson ? 'bg-gradient-to-br from-blue-600 to-indigo-600' : 'bg-slate-100'
+                                                                            }`}>
+                                                                                <User className={`w-5 h-5 sm:w-6 sm:h-6 ${
+                                                                                    isCurrentLesson ? 'text-white' : 'text-slate-600'
+                                                                                }`} />
                                                                             </div>
-                                                                        </div>
-                                                                    </div>
-                                                                    
-                                                                    <div className="relative">
-                                                                        <button 
-                                                                            onClick={() => setOpenDropdown(openDropdown === lesson.id ? null : lesson.id)}
-                                                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-gray-100 rounded-lg"
-                                                                        >
-                                                                            <MoreVertical className="w-5 h-5 text-gray-400" />
-                                                                        </button>
-                                                                        
-                                                                        {openDropdown === lesson.id && (
-                                                                            <>
-                                                                                <div 
-                                                                                    className="fixed inset-0 z-40"
-                                                                                    onClick={() => setOpenDropdown(null)}
-                                                                                />
-                                                                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 py-1">
-                                                                                    <button
-                                                                                        onClick={() => handleEditLesson(lesson)}
-                                                                                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                                                                    >
-                                                                                        <Edit size={16} className="text-blue-500" />
-                                                                                        <span>Izmeni čas</span>
-                                                                                    </button>
-                                                                                    {deleteConfirm === lesson.id ? (
-                                                                                        <div className="px-4 py-3">
-                                                                                            <p className="text-xs text-gray-500 mb-2">Potvrdi brisanje?</p>
-                                                                                            <div className="flex gap-2">
-                                                                                                <button
-                                                                                                    onClick={() => handleDeleteLesson(lesson.id)}
-                                                                                                    className="flex-1 bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-red-600"
-                                                                                                >
-                                                                                                    Da
-                                                                                                </button>
-                                                                                                <button
-                                                                                                    onClick={() => setDeleteConfirm(null)}
-                                                                                                    className="flex-1 bg-gray-100 text-gray-700 text-xs px-3 py-1.5 rounded-lg hover:bg-gray-200"
-                                                                                                >
-                                                                                                    Ne
-                                                                                                </button>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    ) : (
-                                                                                        <button
-                                                                                            onClick={() => setDeleteConfirm(lesson.id)}
-                                                                                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                                                                                        >
-                                                                                            <Trash2 size={16} />
-                                                                                            <span>Obriši čas</span>
-                                                                                        </button>
+                                                                            
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <p className="text-sm sm:text-base font-semibold text-slate-800 group-hover:text-blue-600 transition-colors truncate">
+                                                                                    {student?.fullName || "Student"}
+                                                                                </p>
+                                                                                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1">
+                                                                                    <div className="flex items-center gap-1 text-slate-500">
+                                                                                        <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                                                                                        <span className="text-[10px] sm:text-xs">{lesson.startTime} - {lesson.endTime}</span>
+                                                                                    </div>
+                                                                                    {isCurrentLesson && (
+                                                                                        <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full shadow-sm">
+                                                                                            Danas
+                                                                                        </span>
                                                                                     )}
                                                                                 </div>
-                                                                            </>
-                                                                        )}
+                                                                            </div>
+                                                                        </div>
+                                                                        
+                                                                        <div className="relative self-end xs:self-auto mt-2 xs:mt-0">
+                                                                            <button 
+                                                                                onClick={() => setOpenDropdown(openDropdown === lesson.id ? null : lesson.id)}
+                                                                                className="opacity-100 xs:opacity-0 group-hover:opacity-100 transition-all p-1.5 sm:p-2 hover:bg-white/80 rounded-lg"
+                                                                            >
+                                                                                <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />
+                                                                            </button>
+                                                                            
+                                                                            {openDropdown === lesson.id && (
+                                                                                <>
+                                                                                    <div 
+                                                                                        className="fixed inset-0 z-40"
+                                                                                        onClick={() => setOpenDropdown(null)}
+                                                                                    />
+                                                                                    <div className="absolute right-0 mt-2 w-48 sm:w-56 bg-white rounded-lg sm:rounded-xl shadow-xl border border-slate-100 z-50 py-1 overflow-hidden">
+                                                                                        <div className="px-3 py-2 bg-slate-50 border-b border-slate-100">
+                                                                                            <p className="text-[10px] sm:text-xs font-medium text-slate-500">AKCIJE</p>
+                                                                                        </div>
+                                                                                        <button
+                                                                                            onClick={() => handleEditLesson(lesson)}
+                                                                                            className="w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                                                                        >
+                                                                                            <Edit size={14} className="sm:w-4 sm:h-4 text-blue-500" />
+                                                                                            <span>Izmeni čas</span>
+                                                                                        </button>
+                                                                                        {deleteConfirm === lesson.id ? (
+                                                                                            <div className="px-3 sm:px-4 py-2 sm:py-3 border-t border-slate-100">
+                                                                                                <p className="text-[10px] sm:text-xs text-slate-500 mb-2">Potvrdi brisanje?</p>
+                                                                                                <div className="flex gap-2">
+                                                                                                    <button
+                                                                                                        onClick={() => handleDeleteLesson(lesson.id)}
+                                                                                                        className="flex-1 bg-gradient-to-r from-red-600 to-rose-600 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg hover:from-red-700 hover:to-rose-700"
+                                                                                                    >
+                                                                                                        Da
+                                                                                                    </button>
+                                                                                                    <button
+                                                                                                        onClick={() => setDeleteConfirm(null)}
+                                                                                                        className="flex-1 bg-slate-100 text-slate-700 text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg hover:bg-slate-200"
+                                                                                                    >
+                                                                                                        Ne
+                                                                                                    </button>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <button
+                                                                                                onClick={() => setDeleteConfirm(lesson.id)}
+                                                                                                className="w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-slate-100"
+                                                                                            >
+                                                                                                <Trash2 size={14} className="sm:w-4 sm:h-4" />
+                                                                                                <span>Obriši čas</span>
+                                                                                            </button>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </>
+                                                                            )}
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                            </div>
-                                                        );
-                                                    })}
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -388,29 +429,32 @@ const Page = () => {
 
                         {/* MODAL ZA DODAVANJE */}
                         {openModal && (
-                            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                                <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-fadeIn">
-                                    <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                                <div className="bg-white rounded-xl sm:rounded-2xl w-full max-w-md shadow-2xl animate-modalIn">
+                                    <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
                                         <div>
-                                            <h2 className="text-xl font-bold text-gray-800">Dodaj novi čas</h2>
-                                            <p className="text-sm text-gray-500 mt-1">Unesite detalje časa</p>
+                                            <h2 className="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
+                                                <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                                                Dodaj novi čas
+                                            </h2>
+                                            <p className="text-xs sm:text-sm text-slate-500 mt-1">Unesite detalje časa</p>
                                         </div>
                                         <button 
                                             onClick={() => setOpenModal(false)}
-                                            className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                                            className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg transition-colors"
                                         >
-                                            <X className="w-5 h-5 text-gray-500" />
+                                            <X className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />
                                         </button>
                                     </div>
 
-                                    <div className="p-6">
-                                        <div className="space-y-4">
+                                    <div className="p-4 sm:p-5 lg:p-6">
+                                        <div className="space-y-3 sm:space-y-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Student</label>
+                                                <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">Student</label>
                                                 <select
                                                     value={selectedStudent}
                                                     onChange={(e) => setSelectedStudent(e.target.value)}
-                                                    className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                                    className="w-full border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white"
                                                 >
                                                     <option value="">Izaberi studenta</option>
                                                     {students.map(s => (
@@ -420,50 +464,50 @@ const Page = () => {
                                             </div>
 
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Datum</label>
+                                                <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">Datum</label>
                                                 <input
                                                     type="date"
                                                     value={date}
                                                     onChange={(e) => setDate(e.target.value)}
-                                                    className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                                    className="w-full border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                                                 />
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-3">
+                                            <div className="grid grid-cols-2 gap-2 sm:gap-3">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Od</label>
+                                                    <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">Od</label>
                                                     <input
                                                         type="time"
                                                         value={startTime}
                                                         onChange={(e) => setStartTime(e.target.value)}
-                                                        className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                                        className="w-full border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Do</label>
+                                                    <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">Do</label>
                                                     <input
                                                         type="time"
                                                         value={endTime}
                                                         onChange={(e) => setEndTime(e.target.value)}
-                                                        className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                                        className="w-full border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                                                     />
                                                 </div>
                                             </div>
 
-                                            <div className="flex justify-end gap-3 mt-6">
+                                            <div className="flex justify-end gap-2 sm:gap-3 mt-4 sm:mt-6">
                                                 <button
                                                     onClick={() => setOpenModal(false)}
-                                                    className="px-5 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors font-medium"
+                                                    className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors font-medium text-xs sm:text-sm text-slate-600"
                                                 >
                                                     Otkaži
                                                 </button>
                                                 <button
                                                     onClick={handleAddLesson}
                                                     disabled={!selectedStudent || !date || !startTime || !endTime}
-                                                    className={`px-5 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                                                    className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 ${
                                                         selectedStudent && date && startTime && endTime
-                                                            ? 'bg-linear-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-600/20'
-                                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-600/20'
+                                                            : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                                                     }`}
                                                 >
                                                     Sačuvaj čas
@@ -477,32 +521,35 @@ const Page = () => {
 
                         {/* MODAL ZA EDITOVANJE */}
                         {editModal && (
-                            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                                <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-fadeIn">
-                                    <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                                <div className="bg-white rounded-xl sm:rounded-2xl w-full max-w-md shadow-2xl animate-modalIn">
+                                    <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
                                         <div>
-                                            <h2 className="text-xl font-bold text-gray-800">Izmeni čas</h2>
-                                            <p className="text-sm text-gray-500 mt-1">Izmenite detalje časa</p>
+                                            <h2 className="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
+                                                <Edit className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                                                Izmeni čas
+                                            </h2>
+                                            <p className="text-xs sm:text-sm text-slate-500 mt-1">Izmenite detalje časa</p>
                                         </div>
                                         <button 
                                             onClick={() => {
                                                 setEditModal(false);
                                                 setEditingLesson(null);
                                             }}
-                                            className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                                            className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg transition-colors"
                                         >
-                                            <X className="w-5 h-5 text-gray-500" />
+                                            <X className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />
                                         </button>
                                     </div>
 
-                                    <div className="p-6">
-                                        <div className="space-y-4">
+                                    <div className="p-4 sm:p-5 lg:p-6">
+                                        <div className="space-y-3 sm:space-y-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Student</label>
+                                                <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">Student</label>
                                                 <select
                                                     value={editStudent}
                                                     onChange={(e) => setEditStudent(e.target.value)}
-                                                    className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                                    className="w-full border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white"
                                                 >
                                                     <option value="">Izaberi studenta</option>
                                                     {students.map(s => (
@@ -512,53 +559,53 @@ const Page = () => {
                                             </div>
 
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Datum</label>
+                                                <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">Datum</label>
                                                 <input
                                                     type="date"
                                                     value={editDate}
                                                     onChange={(e) => setEditDate(e.target.value)}
-                                                    className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                                    className="w-full border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                                                 />
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-3">
+                                            <div className="grid grid-cols-2 gap-2 sm:gap-3">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Od</label>
+                                                    <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">Od</label>
                                                     <input
                                                         type="time"
                                                         value={editStartTime || ""}
                                                         onChange={(e) => setEditStartTime(e.target.value)}
-                                                        className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                                        className="w-full border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Do</label>
+                                                    <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">Do</label>
                                                     <input
                                                         type="time"
                                                         value={editEndTime || ""}
                                                         onChange={(e) => setEditEndTime(e.target.value)}
-                                                        className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                                        className="w-full border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                                                     />
                                                 </div>
                                             </div>
 
-                                            <div className="flex justify-end gap-3 mt-6">
+                                            <div className="flex justify-end gap-2 sm:gap-3 mt-4 sm:mt-6">
                                                 <button
                                                     onClick={() => {
                                                         setEditModal(false);
                                                         setEditingLesson(null);
                                                     }}
-                                                    className="px-5 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors font-medium"
+                                                    className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors font-medium text-xs sm:text-sm text-slate-600"
                                                 >
                                                     Otkaži
                                                 </button>
                                                 <button
                                                     onClick={handleUpdateLesson}
                                                     disabled={!editStudent || !editDate || !editStartTime || !editEndTime}
-                                                    className={`px-5 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                                                    className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 ${
                                                         editStudent && editDate && editStartTime && editEndTime
-                                                            ? 'bg-linear-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-600/20'
-                                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-600/20'
+                                                            : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                                                     }`}
                                                 >
                                                     Sačuvaj izmene
@@ -570,7 +617,8 @@ const Page = () => {
                             </div>
                         )}
 
-                        <div>
+                        {/* Testovi sekcija */}
+                        <div className="mt-6 sm:mt-8">
                             <TestsList/>
                         </div>
                     </div>
@@ -578,71 +626,196 @@ const Page = () => {
 
             case "Podesavanja":
                 return (
-                    <Settings2/>
+                    <div className="animate-fadeIn">
+                        <Settings2/>
+                    </div>
                 );
         }
     };
 
     return (
         <Protected allowedRoles={["instruktor"]}>
-            <div className="flex h-screen bg-gray-50">
-                <aside className="h-screen w-72 p-6 top-0 sticky bg-white border-r border-gray-200">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 bg-linear-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
-                            <Car className="w-5 h-5 text-white" />
+            <div className="min-h-screen bg-slate-50">
+                {/* Mobile Header */}
+                <div className="lg:hidden bg-white border-b border-slate-200 p-3 sm:p-4 sticky top-0 z-30">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
+                                <Car className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                            </div>
+                            <h1 className="font-bold text-sm sm:text-base text-slate-800">AutoŠkola Šampion</h1>
                         </div>
-                        <h1 className="font-bold text-xl text-gray-800">AutoŠkola Šampion</h1>
+                        <button
+                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                            className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                        >
+                            {mobileMenuOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
+                        </button>
                     </div>
-                    
-                    <hr className="border-gray-100 mb-6" />
+                </div>
 
-                    <nav className="space-y-2">
-                        <button
-                            onClick={() => setActiveSection("Glavna")}
-                            className={`flex items-center gap-3 w-full text-left p-3 rounded-xl transition-all duration-200 ${
-                                activeSection === 'Glavna'
-                                    ? 'bg-linear-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-600/20'
-                                    : 'text-gray-600 hover:bg-gray-50'
-                            }`}
-                        >
-                            <CarFront size={20} />
-                            <span className="font-medium flex-1">Početna</span>
-                            {activeSection === 'Glavna' && (
-                                <ChevronRight size={18} className="text-white/70" />
-                            )}
-                        </button>
+                {/* Mobile Menu */}
+                {mobileMenuOpen && (
+                    <div className="lg:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setMobileMenuOpen(false)}>
+                        <div className="absolute left-0 top-0 h-full w-64 sm:w-72 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+                            <div className="p-4 sm:p-6">
+                                <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
+                                        <Car className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                                    </div>
+                                    <h1 className="font-bold text-sm sm:text-base text-slate-800">AutoŠkola Šampion</h1>
+                                </div>
+                                
+                                {currentUser && (
+                                    <div className="p-3 sm:p-4 bg-gradient-to-r from-slate-50 to-blue-50 rounded-lg sm:rounded-xl mb-4 sm:mb-6 border border-slate-200">
+                                        <p className="text-[10px] sm:text-xs text-slate-500 mb-1">Prijavljeni kao</p>
+                                        <p className="text-xs sm:text-sm font-semibold text-slate-800 truncate">{currentUser.email}</p>
+                                    </div>
+                                )}
+                                
+                                <nav className="space-y-1 sm:space-y-2">
+                                    <button
+                                        onClick={() => {
+                                            setActiveSection("Glavna");
+                                            setMobileMenuOpen(false);
+                                        }}
+                                        className={`flex items-center gap-2 sm:gap-3 w-full text-left p-2 sm:p-3 rounded-lg sm:rounded-xl text-sm sm:text-base transition-all duration-200 ${
+                                            activeSection === 'Glavna'
+                                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
+                                                : 'text-slate-600 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        <LayoutDashboard size={18} className="sm:w-5 sm:h-5" />
+                                        <span className="font-medium">Početna</span>
+                                    </button>
 
-                        <button
-                            onClick={() => setActiveSection("Podesavanja")}
-                            className={`flex items-center gap-3 w-full text-left p-3 rounded-xl transition-all duration-200 ${
-                                activeSection === 'Podesavanja'
-                                    ? 'bg-linear-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-600/20'
-                                    : 'text-gray-600 hover:bg-gray-50'
-                            }`}
-                        >
-                            <Settings size={20} />
-                            <span className="font-medium flex-1">Podešavanja</span>
-                            {activeSection === 'Podesavanja' && (
-                                <ChevronRight size={18} className="text-white/70" />
-                            )}
-                        </button>
-                    </nav>
+                                    <button
+                                        onClick={() => {
+                                            setActiveSection("Podesavanja");
+                                            setMobileMenuOpen(false);
+                                        }}
+                                        className={`flex items-center gap-2 sm:gap-3 w-full text-left p-2 sm:p-3 rounded-lg sm:rounded-xl text-sm sm:text-base transition-all duration-200 ${
+                                            activeSection === 'Podesavanja'
+                                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
+                                                : 'text-slate-600 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        <Settings size={18} className="sm:w-5 sm:h-5" />
+                                        <span className="font-medium">Podešavanja</span>
+                                    </button>
 
-                    {currentUser && (
-                        <div className="absolute bottom-6 left-6 right-6">
-                            <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-sm text-gray-500">Prijavljeni kao</p>
-                                <p className="font-semibold text-gray-800 truncate">{currentUser.email}</p>
-                                <button onClick={logout} className='font-semibold bg-blue-600 text-white rounded-lg p-2 hover:bg-blue-700 cursor-pointer mt-6'>Odjavite se</button>
+                                    <div className="border-t border-slate-200 my-3 sm:my-4"></div>
+
+                                    <button
+                                        onClick={logout}
+                                        className='flex items-center gap-2 sm:gap-3 w-full text-left p-2 sm:p-3 rounded-lg sm:rounded-xl text-sm sm:text-base bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-200'
+                                    >
+                                        <LogOut size={18} className="sm:w-5 sm:h-5" />
+                                        <span className="font-medium">Odjavite se</span>
+                                    </button>
+                                </nav>
                             </div>
                         </div>
-                    )}
+                    </div>
+                )}
+
+                {/* Desktop Sidebar */}
+                <aside className="hidden lg:block fixed left-0 top-0 h-full w-64 xl:w-72 bg-white border-r border-slate-200 shadow-lg">
+                    <div className="p-5 xl:p-6 h-full flex flex-col">
+                        <div className="flex items-center gap-2 xl:gap-3 mb-5 xl:mb-6">
+                            <div className="w-10 h-10 xl:w-12 xl:h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                                <Car className="w-5 h-5 xl:w-6 xl:h-6 text-white" />
+                            </div>
+                            <h1 className="font-bold text-base xl:text-xl text-slate-800">AutoŠkola Šampion</h1>
+                        </div>
+                        
+                        <hr className="border-slate-100 mb-5 xl:mb-6" />
+
+                        <nav className="flex-1 space-y-1 xl:space-y-2">
+                            <button
+                                onClick={() => setActiveSection("Glavna")}
+                                className={`flex items-center gap-2 xl:gap-3 w-full text-left p-2 xl:p-3 rounded-lg xl:rounded-xl text-sm xl:text-base transition-all duration-200 ${
+                                    activeSection === 'Glavna'
+                                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                                        : 'text-slate-600 hover:bg-slate-50'
+                                }`}
+                            >
+                                <LayoutDashboard size={20} className="xl:w-5 xl:h-5" />
+                                <span className="font-medium flex-1">Početna</span>
+                                <ChevronRight size={16} className="xl:w-4 xl:h-4 text-white/70" />
+                            </button>
+
+                            <button
+                                onClick={() => setActiveSection("Podesavanja")}
+                                className={`flex items-center gap-2 xl:gap-3 w-full text-left p-2 xl:p-3 rounded-lg xl:rounded-xl text-sm xl:text-base transition-all duration-200 ${
+                                    activeSection === 'Podesavanja'
+                                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                                        : 'text-slate-600 hover:bg-slate-50'
+                                }`}
+                            >
+                                <Settings size={20} className="xl:w-5 xl:h-5" />
+                                <span className="font-medium flex-1">Podešavanja</span>
+                                <ChevronRight size={16} className="xl:w-4 xl:h-4 text-white/70" />
+                            </button>
+                        </nav>
+
+                        {currentUser && (
+                            <div className="mt-auto pt-5 xl:pt-6 border-t border-slate-200">
+                                <div className="p-3 xl:p-4 bg-gradient-to-r from-slate-50 to-blue-50 rounded-lg xl:rounded-xl border border-slate-200">
+                                    <p className="text-[10px] xl:text-xs text-slate-500 mb-1">Prijavljeni kao</p>
+                                    <p className="text-xs xl:text-sm font-semibold text-slate-800 truncate flex items-center gap-2">
+                                        <User className="w-3 h-3 xl:w-4 xl:h-4 text-blue-600" />
+                                        {currentUser.email}
+                                    </p>
+                                    <button 
+                                        onClick={logout} 
+                                        className='w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg xl:rounded-xl p-2 xl:p-3 text-xs xl:text-sm hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 mt-3 xl:mt-4 shadow-md'
+                                    >
+                                        <LogOut size={16} className="xl:w-4 xl:h-4" />
+                                        <span>Odjavite se</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </aside>
 
-                <main className="flex-1 p-8 overflow-auto">
-                    {renderContent()}
+                {/* Main Content */}
+                <main className="lg:ml-64 xl:ml-72">
+                    <div className="p-3 sm:p-4 lg:p-6 xl:p-8 max-w-7xl mx-auto">
+                        {renderContent()}
+                    </div>
                 </main>
             </div>
+
+            <style jsx>{`
+                @keyframes modalIn {
+                    from {
+                        opacity: 0;
+                        transform: scale(0.95) translateY(-20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: scale(1) translateY(0);
+                    }
+                }
+                .animate-modalIn {
+                    animation: modalIn 0.3s ease-out;
+                }
+                .animate-fadeIn {
+                    animation: fadeIn 0.3s ease-out;
+                }
+                @keyframes fadeIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+            `}</style>
         </Protected>
     );
 };

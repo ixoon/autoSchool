@@ -5,7 +5,11 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import Protected from '../../../Components/Protected';
 import React, { useEffect, useState } from 'react';
-import { Car, CarFront, Users, Settings, LogOut, Loader2, Calendar, User } from 'lucide-react';
+import { 
+  Car, CarFront, Users, Settings, LogOut, Loader2, Calendar, User, 
+  GraduationCap, Clock, Phone, Mail, ChevronRight, Home, 
+  Menu, Bell, BookOpen, Award, TrendingUp, AlertCircle, X
+} from 'lucide-react';
 import Settings2 from '../../../Components/Settings';
 import { getDocs, collection, query, where, doc, getDoc } from 'firebase/firestore';
 import TestsList from '../../../Components/TestsList';
@@ -20,6 +24,7 @@ const StudentDashboard = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const router = useRouter();
 
@@ -219,19 +224,27 @@ const StudentDashboard = () => {
     if (loading) {
       return (
         <div className="flex flex-col items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
-          <p className="text-gray-600">Učitavanje podataka...</p>
+          <div className="relative">
+            <div className="w-16 h-16 rounded-full border-4 border-slate-100 border-t-blue-600 animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <GraduationCap className="w-6 h-6 text-blue-600 opacity-50" />
+            </div>
+          </div>
+          <p className="text-slate-600 mt-4 font-medium">Učitavanje podataka...</p>
         </div>
       );
     }
 
     if (error) {
       return (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+        <div className="bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-2xl p-8 text-center max-w-md mx-auto mt-20">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-red-600" />
+          </div>
+          <p className="text-red-600 font-medium mb-4">{error}</p>
           <button 
             onClick={() => window.location.reload()} 
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg"
           >
             Pokušaj ponovo
           </button>
@@ -242,95 +255,222 @@ const StudentDashboard = () => {
     switch (activeSection) {
       case "Pocetna":
         return (
-          <div className="space-y-6">
-            {/* Student info kartica */}
-            {studentData && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                  Dobrodošli, {studentData.fullName || studentData.ime || 'Studente'}!
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-600">Email</p>
-                    <p className="font-medium">{studentData.email}</p>
-                  </div>
-                  {studentData.brojTelefona && (
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-600">Telefon</p>
-                      <p className="font-medium">{studentData.brojTelefona}</p>
-                    </div>
-                  )}
-                  {studentData.kategorija && (
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-600">Kategorija</p>
-                      <p className="font-medium">{studentData.kategorija}</p>
-                    </div>
-                  )}
-                </div>
+          <div className="space-y-8">
+            {/* Welcome header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
+                  Dobrodošli, {studentData?.fullName || studentData?.ime || 'Studente'}!
+                </h1>
+                <p className="text-slate-500 mt-1">Vaš studentski panel</p>
               </div>
-            )}
+              <div className="flex items-center gap-3">
+                <button className="p-2.5 bg-white rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors relative">
+                  <Bell className="w-5 h-5 text-slate-600" />
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full"></span>
+                </button>
+              </div>
+            </div>
 
-            {/* Instruktor kartica */}
-            {instructorData && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <User className="h-5 w-5 text-blue-600" />
-                  <h3 className="text-lg font-semibold text-gray-800">Tvoj instruktor</h3>
-                </div>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="font-medium text-gray-800">{instructorData.fullName}</p>
-                  <p className="text-sm text-gray-600 mt-1">{instructorData.email}</p>
-                  {instructorData.godine && (
-                    <p className="text-sm text-gray-600 mt-1">Godine: {instructorData.godine}</p>
-                  )}
-                </div>
+            {/* Student info kartica */}
+           {/* STUDENT + INSTRUKTOR ZAJEDNO */}
+{studentData && (
+  <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+
+    {/* Header */}
+    <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+      <h2 className="text-lg sm:text-xl font-bold text-slate-800">
+        Tvoj profil i instruktor
+      </h2>
+      <p className="text-sm text-slate-500 mt-1">
+        Osnovne informacije o tebi i tvom instruktoru
+      </p>
+    </div>
+
+    {/* Content */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
+
+      {/* STUDENT */}
+      <div className="p-6 space-y-6">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
+            <User className="w-7 h-7 text-white" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-800">
+              {studentData.fullName || studentData.ime || "Student"}
+            </h3>
+            <p className="text-sm text-slate-500">Polaznik auto škole</p>
+          </div>
+        </div>
+
+        <div className="space-y-3 text-sm">
+          <div className="flex items-center gap-3">
+            <Mail className="w-4 h-4 text-blue-600" />
+            <span className="text-slate-700 break-all">{studentData.email}</span>
+          </div>
+
+          {studentData.brojTelefona && (
+            <div className="flex items-center gap-3">
+              <Phone className="w-4 h-4 text-green-600" />
+              <span className="text-slate-700">{studentData.brojTelefona}</span>
+            </div>
+          )}
+
+          {studentData.kategorija && (
+            <div className="flex items-center gap-3">
+              <Car className="w-4 h-4 text-purple-600" />
+              <span className="text-slate-700">
+                Kategorija: <span className="font-semibold">{studentData.kategorija}</span>
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* INSTRUKTOR */}
+      <div className="p-6 space-y-6 bg-slate-50/40">
+        {instructorData ? (
+          <>
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
+                <Users className="w-7 h-7 text-white" />
               </div>
-            )}
+              <div>
+                <h3 className="text-base font-bold text-slate-800">
+                  {instructorData.fullName}
+                </h3>
+                <p className="text-sm text-slate-500">Tvoj instruktor</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center gap-3">
+                <Mail className="w-4 h-4 text-purple-600" />
+                <span className="text-slate-700 break-all">
+                  {instructorData.email}
+                </span>
+              </div>
+
+              {instructorData.godine && (
+                <div className="flex items-center gap-3">
+                  <Clock className="w-4 h-4 text-pink-600" />
+                  <span className="text-slate-700">
+                    Godine iskustva:{" "}
+                    <span className="font-semibold">{instructorData.godine}</span>
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-center text-slate-500">
+            <Users className="w-8 h-8 mb-2 opacity-50" />
+            <p className="text-sm">
+              Instruktor još nije dodeljen.
+            </p>
+          </div>
+        )}
+      </div>
+
+    </div>
+  </div>
+)}
+            
 
             {/* Raspored časova za ovu nedelju */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Calendar className="h-5 w-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-800">Raspored časova - ova nedelja</h3>
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-4 sm:p-6 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center gap-2 mb-4 sm:mb-6">
+                <div className="p-2 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg">
+                  <Calendar className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-lg sm:text-xl font-bold text-slate-800">Raspored časova - ova nedelja</h2>
               </div>
               
               {thisWeekLessons.length > 0 ? (
                 <div className="space-y-3">
-                  {thisWeekLessons.map((lesson: any) => (
-                    <div key={lesson.id} className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
-                      <p className="font-medium text-gray-800">
-                        {formatDateTime(lesson.date, lesson.startTime, lesson.endTime)}
-                      </p>
-                      <div className="flex items-center mt-2 text-sm text-gray-600">
-                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
-                          Čas vožnje
-                        </span>
+                  {thisWeekLessons.map((lesson: any, index: number) => {
+                    const isToday = lesson.date === new Date().toISOString().split('T')[0];
+                    
+                    return (
+                      <div 
+                        key={lesson.id} 
+                        className={`group relative p-4 sm:p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-md ${
+                          isToday 
+                            ? 'border-green-200 bg-gradient-to-r from-green-50/50 to-emerald-50/50' 
+                            : 'border-slate-100 hover:border-slate-200'
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center ${
+                            isToday ? 'bg-gradient-to-br from-green-600 to-emerald-600' : 'bg-slate-100'
+                          }`}>
+                            <Clock className={`w-5 h-5 sm:w-6 sm:h-6 ${isToday ? 'text-white' : 'text-slate-600'}`} />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm sm:text-base font-semibold text-slate-800">
+                              {formatDateTime(lesson.date, lesson.startTime, lesson.endTime)}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2 mt-2">
+                              <span className={`inline-flex items-center gap-1 text-xs px-2 sm:px-3 py-1 rounded-full ${
+                                isToday 
+                                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white' 
+                                  : 'bg-blue-100 text-blue-700'
+                              }`}>
+                                <Car className="w-3 h-3" />
+                                Čas vožnje
+                              </span>
+                              {isToday && (
+                                <span className="text-xs bg-amber-100 text-amber-700 px-2 sm:px-3 py-1 rounded-full">
+                                  Danas
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <ChevronRight className="hidden sm:block w-5 h-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
-                <p className="text-gray-500 text-center py-4">Nema zakazanih časova za ovu nedelju.</p>
+                <div className="text-center py-8 sm:py-12">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-slate-400" />
+                  </div>
+                  <p className="text-sm sm:text-base text-slate-600 font-medium">Nema zakazanih časova za ovu nedelju.</p>
+                  <p className="text-xs sm:text-sm text-slate-400 mt-2">Vaš instruktor će vas kontaktirati za zakazivanje.</p>
+                </div>
               )}
             </div>
 
             {/* Testovi sekcija */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Tvoji testovi</h3>
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-4 sm:p-6 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center gap-2 mb-4 sm:mb-6">
+                <div className="p-2 bg-gradient-to-br from-amber-600 to-orange-600 rounded-lg">
+                  <BookOpen className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-lg sm:text-xl font-bold text-slate-800">Tvoji testovi</h2>
+              </div>
               <TestsList />
             </div>
 
-            <div>
-              <RecentTests/>
+            {/* Recent tests */}
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-4 sm:p-6 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center gap-2 mb-4 sm:mb-6">
+                <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg">
+                  <Award className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-lg sm:text-xl font-bold text-slate-800">Nedavno urađeni testovi</h2>
+              </div>
+              <RecentTests />
             </div>
           </div>
-          
         );
 
       case "Podesavanja":
         return (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Podešavanja naloga</h2>
+          <div className="animate-fadeIn">
             <Settings2 />
           </div>
         );
@@ -342,73 +482,190 @@ const StudentDashboard = () => {
 
   return (
     <Protected allowedRoles={["student"]}>
-      <div className="flex h-screen bg-gray-50">
-        {/* Sidebar */}
-        <aside className="h-screen w-64 p-4 top-0 sticky bg-white border-r border-gray-200 flex flex-col">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Car className="h-5 w-5 text-white" />
+      <div className="min-h-screen bg-slate-50">
+        {/* Mobile Header */}
+        <div className="lg:hidden bg-white border-b border-slate-200 p-4 sticky top-0 z-30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                <Car className="w-4 h-4 text-white" />
+              </div>
+              <h1 className="font-bold text-lg text-slate-800">AutoŠkola Šampion</h1>
             </div>
-            <h1 className="font-bold text-lg text-gray-800">AutoŠkola Šampion</h1>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
-          
-          <hr className="w-full my-4" />
-          
-          {/* Navigacija */}
-          <nav className="flex-1 flex flex-col gap-2">
-            <button 
-              onClick={() => setActiveSection("Pocetna")} 
-              className={`flex gap-3 w-full text-left px-3 py-2.5 rounded-lg transition-colors items-center ${
-                activeSection === 'Pocetna' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'text-gray-700 hover:bg-blue-50'
-              }`}
-            >
-              <CarFront className="h-5 w-5" />
-              <span>Početna</span>
-            </button>
-            
-            <button 
-              onClick={() => setActiveSection("Podesavanja")} 
-              className={`flex gap-3 w-full text-left px-3 py-2.5 rounded-lg transition-colors items-center ${
-                activeSection === 'Podesavanja' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'text-gray-700 hover:bg-blue-50'
-              }`}
-            >
-              <Settings className="h-5 w-5" />
-              <span>Podešavanja</span>
-            </button>
-          </nav>
+        </div>
 
-          {/* Odjava dugme */}
-          <button 
-            onClick={logout}
-            disabled={loggingOut}
-            className='w-full mt-auto flex items-center justify-center gap-2 bg-red-600 text-white rounded-lg py-2.5 px-3 hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-          >
-            {loggingOut ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Odjavljivanje...</span>
-              </>
-            ) : (
-              <>
-                <LogOut className="h-4 w-4" />
-                <span>Odjavi se</span>
-              </>
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setMobileMenuOpen(false)}>
+            <div className="absolute left-0 top-0 h-full w-64 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                    <Car className="w-4 h-4 text-white" />
+                  </div>
+                  <h1 className="font-bold text-base text-slate-800">AutoŠkola Šampion</h1>
+                </div>
+                
+                <hr className="border-slate-100 mb-6" />
+                
+                <nav className="space-y-2">
+                  <button
+                    onClick={() => {
+                      setActiveSection("Pocetna");
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`flex items-center gap-3 w-full text-left p-3 rounded-xl transition-all duration-200 ${
+                      activeSection === 'Pocetna'
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
+                        : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Home className="h-5 w-5" />
+                    <span className="font-medium flex-1">Početna</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setActiveSection("Podesavanja");
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`flex items-center gap-3 w-full text-left p-3 rounded-xl transition-all duration-200 ${
+                      activeSection === 'Podesavanja'
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
+                        : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Settings className="h-5 w-5" />
+                    <span className="font-medium flex-1">Podešavanja</span>
+                  </button>
+                </nav>
+
+                {studentData && (
+                  <div className="mt-6 p-4 bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1">Prijavljeni kao</p>
+                    <p className="text-sm font-semibold text-slate-800 truncate">{studentData?.email}</p>
+                  </div>
+                )}
+
+                <button
+                  onClick={logout}
+                  disabled={loggingOut}
+                  className='w-full mt-6 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl py-3 px-3 transition-all duration-200 disabled:opacity-50 shadow-md'
+                >
+                  {loggingOut ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Odjavljivanje...</span>
+                    </>
+                  ) : (
+                    <>
+                      <LogOut className="h-4 w-4" />
+                      <span>Odjavi se</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Desktop Sidebar */}
+        <aside className="hidden lg:block fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 shadow-lg">
+          <div className="p-6 h-full flex flex-col">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Car className="w-5 h-5 text-white" />
+              </div>
+              <h1 className="font-bold text-xl text-slate-800">AutoŠkola Šampion</h1>
+            </div>
+            
+            <hr className="border-slate-100 mb-6" />
+            
+            <nav className="flex-1 space-y-2">
+              <button
+                onClick={() => setActiveSection("Pocetna")}
+                className={`flex items-center gap-3 w-full text-left p-3 rounded-xl transition-all duration-200 ${
+                  activeSection === 'Pocetna'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                    : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Home className="h-5 w-5" />
+                <span className="font-medium flex-1">Početna</span>
+                {activeSection === 'Pocetna' && <ChevronRight className="w-4 h-4 text-white/70" />}
+              </button>
+              
+              <button
+                onClick={() => setActiveSection("Podesavanja")}
+                className={`flex items-center gap-3 w-full text-left p-3 rounded-xl transition-all duration-200 ${
+                  activeSection === 'Podesavanja'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                    : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Settings className="h-5 w-5" />
+                <span className="font-medium flex-1">Podešavanja</span>
+                {activeSection === 'Podesavanja' && <ChevronRight className="w-4 h-4 text-white/70" />}
+              </button>
+            </nav>
+
+            {studentData && (
+              <div className="mb-6 p-4 bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl border border-slate-200">
+                <p className="text-xs text-slate-500 mb-1">Prijavljeni kao</p>
+                <p className="font-semibold text-slate-800 truncate">{studentData?.email}</p>
+              </div>
             )}
-          </button>
+
+            <button
+              onClick={logout}
+              disabled={loggingOut}
+              className='w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl py-3 px-3 transition-all duration-200 disabled:opacity-50 shadow-md hover:from-blue-700 hover:to-indigo-700'
+            >
+              {loggingOut ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Odjavljivanje...</span>
+                </>
+              ) : (
+                <>
+                  <LogOut className="h-4 w-4" />
+                  <span>Odjavi se</span>
+                </>
+              )}
+            </button>
+          </div>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto">
-          <div className="p-6">
+        <main className="lg:ml-64">
+          <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
             {renderContent()}
           </div>
         </main>
       </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
     </Protected>
   );
 };

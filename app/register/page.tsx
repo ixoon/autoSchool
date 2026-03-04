@@ -21,6 +21,11 @@ import {
   writeBatch
 } from "firebase/firestore";
 import Link from "next/link";
+import { 
+  User, Mail, Lock, CheckCircle, AlertCircle, 
+  Loader2, ArrowLeft, Shield, KeyRound, Eye, EyeOff,
+  FileText, Award, Users, Car
+} from 'lucide-react';
 
 type Role = "student" | "instruktor" | "superadmin";
 
@@ -43,6 +48,8 @@ function RegisterForm() {
   const [registering, setRegistering] = useState(false);
   const [success, setSuccess] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Funkcija za dodavanje debug poruka
   const addDebug = (msg: string) => {
@@ -142,81 +149,88 @@ function RegisterForm() {
   }, [token]);
 
   const handleRegister = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError("");
+    e.preventDefault();
+    setError("");
 
-  if (!fullName.trim()) return setError("Unesite ime i prezime.");
-  if (password.length < 6) return setError("Lozinka mora imati 6+ karaktera.");
-  if (password !== confirmPassword) return setError("Lozinke se ne poklapaju.");
-  if (!role || !inviteDocId || !inviteData) return setError("Greška sa pozivnicom.");
+    if (!fullName.trim()) return setError("Unesite ime i prezime.");
+    if (password.length < 6) return setError("Lozinka mora imati 6+ karaktera.");
+    if (password !== confirmPassword) return setError("Lozinke se ne poklapaju.");
+    if (!role || !inviteDocId || !inviteData) return setError("Greška sa pozivnicom.");
 
-  setRegistering(true);
+    setRegistering(true);
 
-  try {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    const user = cred.user;
-    await sendEmailVerification(user);
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      const user = cred.user;
+      await sendEmailVerification(user);
 
-    const batch = writeBatch(db);
+      const batch = writeBatch(db);
 
-    // USERS
-    batch.set(doc(db, "users", user.uid), {
-      fullName,
-      email,
-      role,
-      createdAt: serverTimestamp(),
-    });
-
-    if (role === "student") {
-      if (!inviteData.autoSkolaId || !inviteData.instruktorId) {
-        throw new Error("Student mora imati autoskolu i instruktora.");
-      }
-
-      batch.set(doc(db, "studenti", user.uid), {
+      // USERS
+      batch.set(doc(db, "users", user.uid), {
         fullName,
         email,
-        autoSkolaId: inviteData.autoSkolaId,
-        instruktorId: inviteData.instruktorId,
+        role,
         createdAt: serverTimestamp(),
       });
-    }
 
-    if (role === "instruktor") {
-      if (!inviteData.autoSkolaId) {
-        throw new Error("Instruktor mora imati autoskolu.");
+      if (role === "student") {
+        if (!inviteData.autoSkolaId || !inviteData.instruktorId) {
+          throw new Error("Student mora imati autoskolu i instruktora.");
+        }
+
+        batch.set(doc(db, "studenti", user.uid), {
+          fullName,
+          email,
+          autoSkolaId: inviteData.autoSkolaId,
+          instruktorId: inviteData.instruktorId,
+          createdAt: serverTimestamp(),
+        });
       }
 
-      batch.set(doc(db, "Instruktori", user.uid), {
-        fullName,
-        email,
-        autoSkolaId: inviteData.autoSkolaId,
-        createdAt: serverTimestamp(),
+      if (role === "instruktor") {
+        if (!inviteData.autoSkolaId) {
+          throw new Error("Instruktor mora imati autoskolu.");
+        }
+
+        batch.set(doc(db, "Instruktori", user.uid), {
+          fullName,
+          email,
+          autoSkolaId: inviteData.autoSkolaId,
+          createdAt: serverTimestamp(),
+        });
+      }
+
+      batch.update(doc(db, "invites", inviteDocId), {
+        used: true,
+        usedBy: user.uid,
+        usedAt: serverTimestamp(),
       });
+
+      await batch.commit();
+      setSuccess(true);
+
+      setTimeout(() => router.push("/login"), 3000);
+    } catch (err: any) {
+      setError(err.message || "Greška pri registraciji.");
+    } finally {
+      setRegistering(false);
     }
-
-    batch.update(doc(db, "invites", inviteDocId), {
-      used: true,
-      usedBy: user.uid,
-      usedAt: serverTimestamp(),
-    });
-
-    await batch.commit();
-    setSuccess(true);
-
-    setTimeout(() => router.push("/login"), 3000);
-  } catch (err: any) {
-    setError(err.message || "Greška pri registraciji.");
-  } finally {
-    setRegistering(false);
-  }
-};
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Provera pozivnice...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-12 max-w-md w-full">
+          <div className="flex flex-col items-center justify-center gap-4">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full border-4 border-slate-100 border-t-blue-600 animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <KeyRound className="w-8 h-8 text-blue-600 opacity-50" />
+              </div>
+            </div>
+            <p className="text-slate-600 font-medium text-lg">Provera pozivnice...</p>
+          </div>
         </div>
       </div>
     );
@@ -224,20 +238,27 @@ function RegisterForm() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 max-w-md w-full">
           <div className="text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-              </svg>
+            <div className="w-20 h-20 bg-gradient-to-br from-green-600 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <CheckCircle className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Uspešna registracija!</h2>
-            <p className="text-gray-600 mb-4">
-              Proverite vaš email ({email}) i verifikujte nalog.
+            <h2 className="text-2xl font-bold text-slate-800 mb-2">Uspešna registracija!</h2>
+            <p className="text-slate-600 mb-6">
+              Proverite vaš email <span className="font-semibold text-blue-600">{email}</span> i verifikujte nalog.
             </p>
             
-            <p className="text-sm text-gray-500 mt-4">
+            <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 mb-6">
+              <p className="text-sm text-blue-700">
+                Nakon verifikacije, moći ćete da se prijavite na sistem.
+              </p>
+            </div>
+
+            <div className="flex justify-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            </div>
+            <p className="text-sm text-slate-500 mt-4">
               Preusmeravanje na login stranicu...
             </p>
           </div>
@@ -246,152 +267,287 @@ function RegisterForm() {
     );
   }
 
-  if (error) {
+  if (error && !role) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 max-w-md w-full">
           <div className="text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
+            <div className="w-20 h-20 bg-gradient-to-br from-red-600 to-rose-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <AlertCircle className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Greška</h2>
-            <p className="text-gray-600 mb-6">{error}</p>
+            <h2 className="text-2xl font-bold text-slate-800 mb-2">Greška</h2>
+            <p className="text-slate-600 mb-6">{error}</p>
             
             <Link
               href="/"
-              className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg"
             >
+              <ArrowLeft className="w-4 h-4" />
               Idi na početnu
             </Link>
-
           </div>
         </div>
       </div>
     );
   }
 
+  const getRoleIcon = () => {
+    switch(role) {
+      case 'student': return <Users className="w-5 h-5 text-white" />;
+      case 'instruktor': return <Award className="w-5 h-5 text-white" />;
+      case 'superadmin': return <Shield className="w-5 h-5 text-white" />;
+      default: return <User className="w-5 h-5 text-white" />;
+    }
+  };
+
+  const getRoleColor = () => {
+    switch(role) {
+      case 'student': return 'from-blue-600 to-indigo-600';
+      case 'instruktor': return 'from-purple-600 to-pink-600';
+      case 'superadmin': return 'from-amber-600 to-orange-600';
+      default: return 'from-blue-600 to-indigo-600';
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Dovršite registraciju
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Registrujete se kao <span className="font-semibold text-blue-600">{role}</span>
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl shadow-xl shadow-blue-600/20 mb-4">
+            <Car className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-800">AutoŠkola Šampion</h1>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleRegister}>
-          <div className="rounded-md shadow-sm space-y-4">
-            <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
-                Ime i prezime
-              </label>
-              <input
-                id="fullName"
-                type="text"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Marko Marković"
-                disabled={registering}
-              />
+        {/* Glavna kartica */}
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+          {/* Header */}
+          <div className={`bg-gradient-to-r ${getRoleColor()} p-6 text-center`}>
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-2xl backdrop-blur-sm mb-3">
+              {getRoleIcon()}
             </div>
+            <h2 className="text-2xl font-bold text-white mb-1">Dovršite registraciju</h2>
+            <p className="text-white/90 text-sm">
+              Registrujete se kao <span className="font-semibold capitalize">{role}</span>
+            </p>
+          </div>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email adresa
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                disabled
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 bg-gray-100 text-gray-500 rounded-lg sm:text-sm"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Email je dodeljen putem pozivnice
+          {/* Forma */}
+          <div className="p-6">
+            <form className="space-y-5" onSubmit={handleRegister}>
+              {/* Ime i prezime */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700 flex items-center gap-1">
+                  <User className="w-4 h-4 text-blue-600" />
+                  Ime i prezime
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="pl-10 w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    placeholder="Marko Marković"
+                    disabled={registering}
+                  />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700 flex items-center gap-1">
+                  <Mail className="w-4 h-4 text-blue-600" />
+                  Email adresa
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <input
+                    type="email"
+                    value={email}
+                    disabled
+                    className="pl-10 w-full border border-slate-200 bg-slate-50 text-slate-500 rounded-xl p-3"
+                  />
+                </div>
+                <p className="text-xs text-slate-500 flex items-center gap-1">
+                  <FileText className="w-3 h-3" />
+                  Email je dodeljen putem pozivnice
+                </p>
+              </div>
+
+              {/* Lozinka */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700 flex items-center gap-1">
+                  <Lock className="w-4 h-4 text-blue-600" />
+                  Lozinka
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 pr-12 w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    placeholder="••••••••"
+                    minLength={6}
+                    disabled={registering}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5 text-slate-400 hover:text-slate-600" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-slate-400 hover:text-slate-600" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Potvrda lozinke */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700 flex items-center gap-1">
+                  <Lock className="w-4 h-4 text-blue-600" />
+                  Potvrdi lozinku
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="pl-10 pr-12 w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    placeholder="••••••••"
+                    minLength={6}
+                    disabled={registering}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-5 w-5 text-slate-400 hover:text-slate-600" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-slate-400 hover:text-slate-600" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Password strength indicator */}
+              {password && (
+                <div className="space-y-2">
+                  <div className="flex gap-1 h-1">
+                    <div className={`flex-1 rounded-full transition-all duration-300 ${
+                      password.length >= 6 ? 'bg-green-500' : 'bg-slate-200'
+                    }`} />
+                    <div className={`flex-1 rounded-full transition-all duration-300 ${
+                      /[A-Z]/.test(password) ? 'bg-green-500' : 'bg-slate-200'
+                    }`} />
+                    <div className={`flex-1 rounded-full transition-all duration-300 ${
+                      /[0-9]/.test(password) ? 'bg-green-500' : 'bg-slate-200'
+                    }`} />
+                    <div className={`flex-1 rounded-full transition-all duration-300 ${
+                      /[^A-Za-z0-9]/.test(password) ? 'bg-green-500' : 'bg-slate-200'
+                    }`} />
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Koristite najmanje 6 karaktera, veliko slovo, broj i specijalni karakter
+                  </p>
+                </div>
+              )}
+
+              {/* Submit dugme */}
+              <button
+                type="submit"
+                disabled={registering}
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl p-3 hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20"
+              >
+                {registering ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Registracija u toku...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5" />
+                    <span>Registruj se</span>
+                  </>
+                )}
+              </button>
+
+              {/* Error poruka */}
+              {error && (
+                <div className="p-4 bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-xl flex items-start gap-3 animate-fadeIn">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              )}
+            </form>
+
+            {/* Link za login */}
+            <div className="mt-6 pt-6 border-t border-slate-200 text-center">
+              <p className="text-sm text-slate-600">
+                Već imate nalog?{' '}
+                <Link 
+                  href="/login" 
+                  className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                >
+                  Prijavite se
+                </Link>
               </p>
             </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Lozinka
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="••••••••"
-                minLength={6}
-                disabled={registering}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                Potvrdi lozinku
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="••••••••"
-                minLength={6}
-                disabled={registering}
-              />
-            </div>
           </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={registering}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {registering ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Registracija u toku...
-                </>
-              ) : "Registruj se"}
-            </button>
-          </div>
-
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
-
-        </form>
+        </div>
 
         {/* Debug info - sakriveno u produkciji */}
         {process.env.NODE_ENV === 'development' && debugInfo.length > 0 && (
-          <div className="mt-8 p-4 bg-gray-100 rounded-lg">
-            <h3 className="font-semibold mb-2">Debug info:</h3>
-            <pre className="text-xs overflow-auto max-h-40">
+          <div className="mt-8 p-4 bg-slate-800 rounded-xl">
+            <h3 className="font-semibold text-white mb-2 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              Debug info:
+            </h3>
+            <pre className="text-xs text-slate-300 overflow-auto max-h-40">
               {debugInfo.map((msg, i) => (
-                <div key={i}>{msg}</div>
+                <div key={i} className="border-b border-slate-700 py-1">
+                  {msg}
+                </div>
               ))}
             </pre>
           </div>
         )}
-
       </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
@@ -400,10 +556,17 @@ function RegisterForm() {
 export default function RegisterPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Učitavanje stranice...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-12 max-w-md w-full">
+          <div className="flex flex-col items-center justify-center gap-4">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full border-4 border-slate-100 border-t-blue-600 animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Car className="w-8 h-8 text-blue-600 opacity-50" />
+              </div>
+            </div>
+            <p className="text-slate-600 font-medium text-lg">Učitavanje stranice...</p>
+          </div>
         </div>
       </div>
     }>

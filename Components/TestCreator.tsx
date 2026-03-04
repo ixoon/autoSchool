@@ -4,7 +4,11 @@ import { useState } from "react";
 import { db, storage } from "../lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { Plus, Trash2, Image, CheckCircle, XCircle, Save, FileText, HelpCircle, AlertCircle } from "lucide-react";
+import { 
+  Plus, Trash2, Image, CheckCircle, XCircle, Save, FileText, 
+  HelpCircle, AlertCircle, Upload, Eye, ArrowLeft, ArrowRight,
+  CheckSquare, Square, Layers, Edit3, Award
+} from "lucide-react";
 
 type Question = {
   question: string;
@@ -17,10 +21,12 @@ type Question = {
 const AddTest = () => {
   const [testName, setTestName] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1); // 1: osnovno, 2: pitanja
 
   const [questionText, setQuestionText] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const [options, setOptions] = useState<string[]>(["", ""]);
   const [correctOptions, setCorrectOptions] = useState<number[]>([]);
@@ -42,8 +48,21 @@ const AddTest = () => {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+      
+      // Simulacija upload progressa
+      setUploadProgress(0);
+      const interval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            return 100;
+          }
+          return prev + 10;
+        });
+      }, 100);
     } else {
       setImagePreview(null);
+      setUploadProgress(0);
     }
   };
 
@@ -120,6 +139,7 @@ const AddTest = () => {
     setQuestionText("");
     setImageFile(null);
     setImagePreview(null);
+    setUploadProgress(0);
     setOptions(["", ""]);
     setCorrectOptions([]);
     setPoints(3);
@@ -146,6 +166,7 @@ const AddTest = () => {
       alert("Test uspešno sačuvan!");
       setTestName("");
       setQuestions([]);
+      setCurrentStep(1);
     } catch (err) {
       console.error(err);
       alert("Greška pri čuvanju testa");
@@ -156,263 +177,413 @@ const AddTest = () => {
     setQuestions(questions.filter((_, i) => i !== index));
   };
 
+  const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
+
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      {/* Header */}
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      {/* Header sa progressom */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">Dodaj novi test</h1>
-        <p className="text-gray-500 mt-1">Kreirajte test za polaznike autoškole</p>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-md">
+            <FileText className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Kreiraj novi test</h1>
+            <p className="text-sm sm:text-base text-slate-500 mt-1">Dodajte pitanja za polaznike autoškole</p>
+          </div>
+        </div>
+
+        {/* Progress steps */}
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className={`flex-1 h-2 rounded-full transition-all duration-300 ${currentStep >= 1 ? 'bg-gradient-to-r from-blue-600 to-indigo-600' : 'bg-slate-200'}`} />
+          <div className={`flex-1 h-2 rounded-full transition-all duration-300 ${currentStep >= 2 ? 'bg-gradient-to-r from-blue-600 to-indigo-600' : 'bg-slate-200'}`} />
+        </div>
+        <div className="flex justify-between mt-2 text-xs sm:text-sm text-slate-500">
+          <span>Osnovne informacije</span>
+          <span>Dodavanje pitanja</span>
+        </div>
       </div>
 
-      {/* Naziv testa */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <FileText className="w-5 h-5 text-blue-600" />
-          <h2 className="text-xl font-semibold text-gray-800">Osnovne informacije</h2>
-        </div>
-        
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Unesite naziv testa"
-            value={testName}
-            onChange={(e) => setTestName(e.target.value)}
-            className="w-full border border-gray-200 rounded-xl p-3 pl-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-          />
-        </div>
-        <p className="text-sm text-gray-500 mt-2">Primer: "Saobraćajni propisi - Test 1"</p>
-      </div>
-
-      {/* Dodavanje pitanja */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <HelpCircle className="w-5 h-5 text-blue-600" />
-          <h2 className="text-xl font-semibold text-gray-800">Dodaj novo pitanje</h2>
-        </div>
-
-        {/* Tekst pitanja */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tekst pitanja <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            placeholder="Unesite tekst pitanja..."
-            value={questionText}
-            onChange={(e) => setQuestionText(e.target.value)}
-            rows={3}
-            className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-          />
-          {errors.question && (
-            <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" />
-              {errors.question}
-            </p>
-          )}
-        </div>
-
-        {/* Slika */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Slika (opciono)
-          </label>
-          <div className="flex items-center gap-4">
-            <label className="cursor-pointer">
-              <div className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-xl transition-colors">
-                <Image className="w-5 h-5 text-gray-600" />
-                <span className="text-sm text-gray-700">Izaberi sliku</span>
-              </div>
+      {/* Step 1: Osnovne informacije */}
+      {currentStep === 1 && (
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 sm:p-8 mb-6 animate-fadeIn">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+              1
+            </div>
+            <h2 className="text-xl font-semibold text-slate-800">Osnovne informacije</h2>
+          </div>
+          
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-1">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Naziv testa <span className="text-red-500">*</span>
+              </label>
               <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
+                type="text"
+                placeholder="npr: Saobraćajni propisi - Test 1"
+                value={testName}
+                onChange={(e) => setTestName(e.target.value)}
+                className="w-full border border-slate-200 rounded-xl p-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-base"
               />
-            </label>
-            {imagePreview && (
-              <div className="relative">
-                <img src={imagePreview} alt="Preview" className="w-20 h-20 object-cover rounded-lg" />
-                <button
-                  onClick={() => {
-                    setImageFile(null);
-                    setImagePreview(null);
-                  }}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                >
-                  <XCircle className="w-4 h-4" />
-                </button>
+              <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                Preporučujemo jedinstven naziv za lakše snalaženje
+              </p>
+            </div>
+
+            {questions.length > 0 && (
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                <p className="text-sm text-blue-700 flex items-center gap-2">
+                  <Layers className="w-4 h-4" />
+                  Već ste dodali {questions.length} pitanja
+                </p>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Opcije */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Opcije odgovora <span className="text-red-500">*</span>
-          </label>
-          <div className="space-y-3">
-            {options.map((opt, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    value={opt}
-                    onChange={(e) => handleOptionChange(i, e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl p-3 pl-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                    placeholder={`Opcija ${i + 1}`}
-                  />
-                  {correctOptions.includes(i) && (
-                    <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id={`correct-${i}`}
-                    checked={correctOptions.includes(i)}
-                    onChange={() => handleCheckboxChange(i)}
-                    className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                  />
-                  <label htmlFor={`correct-${i}`} className="text-sm text-gray-600">
-                    Tačno
-                  </label>
-                  {options.length > 2 && (
-                    <button
-                      onClick={() => removeOption(i)}
-                      className="text-red-500 hover:text-red-700 p-1"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          {errors.options && (
-            <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" />
-              {errors.options}
-            </p>
-          )}
-          
-          {errors.correct && (
-            <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" />
-              {errors.correct}
-            </p>
-          )}
-
-          {options.length < 4 && (
-            <button
-              onClick={addOption}
-              className="mt-3 flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="text-sm font-medium">Dodaj opciju</span>
-            </button>
-          )}
-        </div>
-
-        {/* Bodovi */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Broj bodova
-          </label>
-          <select
-            value={points}
-            onChange={(e) => setPoints(Number(e.target.value))}
-            className="w-full md:w-48 border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-          >
-            <option value={3}>3 boda</option>
-            <option value={4}>4 boda</option>
-          </select>
-        </div>
-
-        {/* Dodaj pitanje */}
-        <button
-          onClick={handleAddQuestion}
-          className="flex items-center gap-2 bg-linear-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg shadow-green-600/20"
-        >
-          <Plus className="w-5 h-5" />
-          <span className="font-medium">Dodaj pitanje</span>
-        </button>
-      </div>
-
-      {/* Pregled pitanja */}
-      {questions.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-600" />
-              <h2 className="text-xl font-semibold text-gray-800">
-                Pregled pitanja ({questions.length})
-              </h2>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setCurrentStep(2)}
+                disabled={!testName.trim()}
+                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+                  testName.trim()
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-600/20'
+                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                <span>Dalje</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
-          </div>
-
-          <div className="space-y-4">
-            {questions.map((q, i) => (
-              <div key={i} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <span className="bg-blue-100 text-blue-800 w-6 h-6 rounded-lg flex items-center justify-center text-sm">
-                      {i + 1}
-                    </span>
-                    {q.question}
-                  </h3>
-                  <button
-                    onClick={() => removeQuestion(i)}
-                    className="text-red-500 hover:text-red-700 p-1"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-                
-                {q.imageUrl && (
-                  <img src={q.imageUrl} alt="Question" className="w-32 h-32 object-cover rounded-lg mb-3" />
-                )}
-                
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                  {q.options.map((opt, j) => (
-                    <div
-                      key={j}
-                      className={`p-2 rounded-lg text-sm ${
-                        q.correctOptions.includes(j)
-                          ? 'bg-green-100 text-green-800 border border-green-200'
-                          : 'bg-gray-50 text-gray-600 border border-gray-200'
-                      }`}
-                    >
-                      {opt}
-                      {q.correctOptions.includes(j) && (
-                        <CheckCircle className="w-4 h-4 inline ml-2 text-green-600" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <span>Bodovi: {q.points}</span>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       )}
 
-      {/* Sačuvaj test */}
-      <button
-        onClick={handleSaveTest}
-        disabled={questions.length === 0}
-        className={`w-full flex items-center justify-center gap-2 p-4 rounded-xl font-semibold transition-all duration-200 ${
-          questions.length > 0
-            ? 'bg-linear-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-600/20'
-            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-        }`}
-      >
-        <Save className="w-5 h-5" />
-        <span>Sačuvaj test</span>
-      </button>
+      {/* Step 2: Dodavanje pitanja */}
+      {currentStep === 2 && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Header sa navigacijom */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setCurrentStep(1)}
+              className="flex items-center gap-2 text-slate-600 hover:text-blue-600 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-sm font-medium">Nazad</span>
+            </button>
+            <div className="text-sm text-slate-500">
+              Ukupno pitanja: <span className="font-semibold text-blue-600">{questions.length}</span>
+            </div>
+          </div>
+
+          {/* Forma za dodavanje pitanja */}
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 sm:p-8">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                2
+              </div>
+              <h2 className="text-xl font-semibold text-slate-800">Dodaj novo pitanje</h2>
+            </div>
+
+            {/* Tekst pitanja */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-1">
+                <Edit3 className="w-4 h-4 text-blue-600" />
+                Tekst pitanja <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                placeholder="Unesite tekst pitanja..."
+                value={questionText}
+                onChange={(e) => setQuestionText(e.target.value)}
+                rows={3}
+                className="w-full border border-slate-200 rounded-xl p-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
+              />
+              {errors.question && (
+                <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.question}
+                </p>
+              )}
+            </div>
+
+            {/* Slika */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-1">
+                <Image className="w-4 h-4 text-blue-600" />
+                Slika (opciono)
+              </label>
+              <div className="flex flex-col sm:flex-row items-start gap-4">
+                <label className="cursor-pointer group">
+                  <div className="flex items-center gap-2 bg-gradient-to-r from-slate-50 to-slate-100 border-2 border-dashed border-slate-300 hover:border-blue-400 px-6 py-4 rounded-xl transition-all group-hover:shadow-md">
+                    <Upload className="w-5 h-5 text-slate-500 group-hover:text-blue-600 transition-colors" />
+                    <span className="text-sm text-slate-600 group-hover:text-blue-600 transition-colors">Izaberi sliku</span>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+                
+                {imagePreview && (
+                  <div className="relative flex-1 max-w-xs">
+                    <div className="relative group">
+                      <img src={imagePreview} alt="Preview" className="w-full h-32 object-cover rounded-xl border-2 border-blue-200 shadow-md" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                        <Eye className="w-6 h-6 text-white" />
+                      </div>
+                    </div>
+                    {uploadProgress > 0 && uploadProgress < 100 && (
+                      <div className="absolute -bottom-1 left-0 right-0 h-1 bg-blue-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                      </div>
+                    )}
+                    <button
+                      onClick={() => {
+                        setImageFile(null);
+                        setImagePreview(null);
+                        setUploadProgress(0);
+                      }}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-md transition-all hover:scale-110"
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Opcije */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-1">
+                <CheckSquare className="w-4 h-4 text-blue-600" />
+                Opcije odgovora <span className="text-red-500">*</span>
+              </label>
+              <div className="space-y-3">
+                {options.map((opt, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        value={opt}
+                        onChange={(e) => handleOptionChange(i, e.target.value)}
+                        className={`w-full border rounded-xl p-4 pr-12 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all ${
+                          correctOptions.includes(i) 
+                            ? 'border-green-300 bg-green-50/30' 
+                            : 'border-slate-200'
+                        }`}
+                        placeholder={`Opcija ${i + 1}`}
+                      />
+                      {correctOptions.includes(i) && (
+                        <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleCheckboxChange(i)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          correctOptions.includes(i)
+                            ? 'bg-green-100 text-green-600'
+                            : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                        }`}
+                      >
+                        {correctOptions.includes(i) ? (
+                          <CheckCircle className="w-5 h-5" />
+                        ) : (
+                          <Square className="w-5 h-5" />
+                        )}
+                      </button>
+                      {options.length > 2 && (
+                        <button
+                          onClick={() => removeOption(i)}
+                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {errors.options && (
+                <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.options}
+                </p>
+              )}
+              
+              {errors.correct && (
+                <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.correct}
+                </p>
+              )}
+
+              {options.length < 4 && (
+                <button
+                  onClick={addOption}
+                  className="mt-3 flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors group"
+                >
+                  <div className="p-1 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+                    <Plus className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm font-medium">Dodaj opciju</span>
+                </button>
+              )}
+            </div>
+
+            {/* Bodovi */}
+            <div className="mb-8">
+              <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-1">
+                <Award className="w-4 h-4 text-blue-600" />
+                Broj bodova
+              </label>
+              <div className="flex gap-3">
+                {[3, 4].map((value) => (
+                  <button
+                    key={value}
+                    onClick={() => setPoints(value)}
+                    className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-200 ${
+                      points === value
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {value} boda
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Dodaj pitanje */}
+            <button
+              onClick={handleAddQuestion}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-4 rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg shadow-green-600/20 font-semibold text-base"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Dodaj pitanje u test</span>
+            </button>
+          </div>
+
+          {/* Pregled pitanja */}
+          {questions.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 sm:p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg">
+                    <Layers className="w-5 h-5 text-white" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-slate-800">
+                    Pregled pitanja
+                  </h2>
+                </div>
+                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium px-4 py-1.5 rounded-full shadow-sm">
+                  {questions.length} pitanja • {totalPoints} bodova
+                </span>
+              </div>
+
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-300">
+                {questions.map((q, i) => (
+                  <div key={i} className="group border border-slate-200 rounded-xl p-5 hover:shadow-lg transition-all hover:border-blue-200">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-start gap-3 flex-1">
+                        <span className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-lg flex items-center justify-center font-bold text-sm shadow-md">
+                          {i + 1}
+                        </span>
+                        <h3 className="font-semibold text-slate-800 flex-1">{q.question}</h3>
+                      </div>
+                      <button
+                        onClick={() => removeQuestion(i)}
+                        className="opacity-0 group-hover:opacity-100 p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    
+                    {q.imageUrl && (
+                      <div className="ml-11 mb-3">
+                        <img src={q.imageUrl} alt="Question" className="w-32 h-32 object-cover rounded-xl border-2 border-slate-200" />
+                      </div>
+                    )}
+                    
+                    <div className="ml-11 grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                      {q.options.map((opt, j) => (
+                        <div
+                          key={j}
+                          className={`p-3 rounded-xl text-sm flex items-center justify-between ${
+                            q.correctOptions.includes(j)
+                              ? 'bg-green-50 text-green-800 border border-green-200'
+                              : 'bg-slate-50 text-slate-600 border border-slate-200'
+                          }`}
+                        >
+                          <span>{opt}</span>
+                          {q.correctOptions.includes(j) && (
+                            <CheckCircle className="w-4 h-4 text-green-600 ml-2 flex-shrink-0" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="ml-11 flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                        <Award className="w-3 h-3" />
+                        {q.points} boda
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Sačuvaj test */}
+          <button
+            onClick={handleSaveTest}
+            disabled={questions.length === 0}
+            className={`w-full flex items-center justify-center gap-3 p-5 rounded-xl font-semibold text-lg transition-all duration-200 ${
+              questions.length > 0
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-xl shadow-blue-600/20 hover:shadow-2xl hover:-translate-y-0.5'
+                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+            }`}
+          >
+            <Save className="w-6 h-6" />
+            <span>Sačuvaj test</span>
+          </button>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+        .scrollbar-thin::-webkit-scrollbar {
+          width: 6px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 10px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+      `}</style>
     </div>
   );
 };

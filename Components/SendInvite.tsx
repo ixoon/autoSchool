@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { db, functions } from '@/lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { Mail, User, School, Users, Calendar, Link as LinkIcon, Send, Copy, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 type Role = 'student' | 'instruktor' | 'superadmin';
 
@@ -22,6 +23,7 @@ export default function SendInvite() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const [inviteData, setInviteData] = useState<{
     email: string;
@@ -56,11 +58,11 @@ export default function SendInvite() {
   }, [autoSkolaId, instruktori]);
 
   const handleCreateInvite = async () => {
-    setError(''); setMessage(''); setInviteData(null); setLoading(true);
+    setError(''); setMessage(''); setInviteData(null); setLoading(true); setCopied(false);
 
     if (!email) { setError('Unesite email'); setLoading(false); return; }
-    if (role === 'student' && (!autoSkolaId || !instruktorId)) { setError('Izaberite autoskolu i instruktora'); setLoading(false); return; }
-    if (role === 'instruktor' && !autoSkolaId) { setError('Izaberite autoskolu'); setLoading(false); return; }
+    if (role === 'student' && (!autoSkolaId || !instruktorId)) { setError('Izaberite autoškolu i instruktora'); setLoading(false); return; }
+    if (role === 'instruktor' && !autoSkolaId) { setError('Izaberite autoškolu'); setLoading(false); return; }
 
     try {
       const createInvite = httpsCallable(functions, 'createInvite');
@@ -80,6 +82,7 @@ console.log('Podaci iz funkcije:', data);
 // kopiš link u clipboard (ako postoji)
 if (data?.inviteLink) {
   await navigator.clipboard.writeText(data.inviteLink);
+  setCopied(true);
   setMessage('✅ Link kreiran i kopiran u clipboard!');
 } else {
   setMessage('✅ Link kreiran (nije kopiran).');
@@ -157,54 +160,254 @@ setInviteData({
         }),
       });
       const data = await response.json();
-      if (response.ok) { setMessage('✅ Mejl je uspešno poslat!'); setInviteData(null); }
+      if (response.ok) { 
+        setMessage('✅ Mejl je uspešno poslat!'); 
+        setInviteData(null); 
+      }
       else setError(data.error || `Greška ${response.status}`);
     } catch (err: any) { setError('Greška pri slanju mejla: ' + err.message); }
     finally { setSendingEmail(false); }
   };
 
+  const handleCopyLink = () => {
+    if (inviteData?.inviteLink) {
+      navigator.clipboard.writeText(inviteData.inviteLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <h1 className="text-2xl font-bold mb-6 text-center">Kreiraj pozivnicu</h1>
+    <div className="w-full">
+      <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl shadow-xl border border-slate-200 p-6">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-md">
+            <Mail className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800">Kreiraj pozivnicu</h2>
+            <p className="text-sm text-slate-500">Pošaljite pozivnicu novom korisniku</p>
+          </div>
+        </div>
 
-          <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full border p-2 rounded mb-2"/>
-          <select value={role} onChange={e => setRole(e.target.value as Role)} className="w-full border p-2 rounded mb-2">
-            <option value="student">Student</option>
-            <option value="instruktor">Instruktor</option>
-          </select>
+        {/* Forma */}
+        <div className="space-y-4">
+          {/* Email polje */}
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-slate-700 flex items-center gap-1">
+              <Mail className="w-4 h-4 text-blue-600" />
+              Email adresa
+            </label>
+            <input 
+              type="email" 
+              placeholder="primer@email.com" 
+              value={email} 
+              onChange={e => setEmail(e.target.value)} 
+              className="w-full border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+            />
+          </div>
 
+          {/* Role select */}
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-slate-700 flex items-center gap-1">
+              <User className="w-4 h-4 text-blue-600" />
+              Uloga
+            </label>
+            <select 
+              value={role} 
+              onChange={e => setRole(e.target.value as Role)} 
+              className="w-full border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all appearance-none bg-white"
+            >
+              <option value="student">Student</option>
+              <option value="instruktor">Instruktor</option>
+            </select>
+          </div>
+
+          {/* Autoškola select */}
           {(role === 'student' || role === 'instruktor') && (
-            <select value={autoSkolaId} onChange={e => setAutoSkolaId(e.target.value)} className="w-full border p-2 rounded mb-2">
-              <option value="">Izaberi autoškolu</option>
-              {autoSkole.map(a => <option key={a.id} value={a.id}>{a.naziv}</option>)}
-            </select>
-          )}
-
-          {role === 'student' && (
-            <select value={instruktorId} onChange={e => setInstruktorId(e.target.value)} className="w-full border p-2 rounded mb-2">
-              <option value="">Izaberi instruktora</option>
-              {filteredInstruktori.map(i => <option key={i.id} value={i.id}>{i.fullName || i.ime}</option>)}
-            </select>
-          )}
-
-          {(role === 'student' || role === 'instruktor') && <input placeholder="Ime i prezime" value={imePrezime} onChange={e => setImePrezime(e.target.value)} className="w-full border p-2 rounded mb-2"/>}
-          {role === 'instruktor' && <input type="number" placeholder="Godine" value={godine} onChange={e => setGodine(e.target.value)} className="w-full border p-2 rounded mb-2"/>}
-
-          <button onClick={handleCreateInvite} disabled={loading} className="w-full py-2 bg-blue-600 text-white rounded mb-2">{loading ? 'Kreiram...' : 'Kreiraj pozivnicu'}</button>
-
-          {inviteData && (
-            <div className="bg-green-50 p-4 rounded">
-              <p className="break-all">{inviteData.inviteLink}</p>
-              <button onClick={handleSendEmail} disabled={sendingEmail} className="w-full py-2 bg-green-600 text-white rounded mt-2">{sendingEmail ? 'Šaljem...' : 'Pošalji mejl'}</button>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-700 flex items-center gap-1">
+                <School className="w-4 h-4 text-blue-600" />
+                Autoškola
+              </label>
+              <select 
+                value={autoSkolaId} 
+                onChange={e => setAutoSkolaId(e.target.value)} 
+                className="w-full border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all appearance-none bg-white"
+              >
+                <option value="">Izaberi autoškolu</option>
+                {autoSkole.map(a => (
+                  <option key={a.id} value={a.id}>{a.naziv} - {a.mesto}</option>
+                ))}
+              </select>
             </div>
           )}
 
-          {message && <p className="text-green-700 mt-2">{message}</p>}
-          {error && <p className="text-red-700 mt-2">{error}</p>}
+          {/* Instruktor select */}
+          {role === 'student' && (
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-700 flex items-center gap-1">
+                <Users className="w-4 h-4 text-blue-600" />
+                Instruktor
+              </label>
+              <select 
+                value={instruktorId} 
+                onChange={e => setInstruktorId(e.target.value)} 
+                className="w-full border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all appearance-none bg-white"
+                disabled={!autoSkolaId}
+              >
+                <option value="">Izaberi instruktora</option>
+                {filteredInstruktori.map(i => (
+                  <option key={i.id} value={i.id}>{i.fullName || i.ime}</option>
+                ))}
+              </select>
+              {!autoSkolaId && (
+                <p className="text-xs text-amber-600 mt-1">Prvo izaberite autoškolu</p>
+              )}
+            </div>
+          )}
+
+          {/* Ime i prezime */}
+          {(role === 'student' || role === 'instruktor') && (
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-700 flex items-center gap-1">
+                <User className="w-4 h-4 text-blue-600" />
+                Ime i prezime
+              </label>
+              <input 
+                placeholder="Marko Marković" 
+                value={imePrezime} 
+                onChange={e => setImePrezime(e.target.value)} 
+                className="w-full border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              />
+            </div>
+          )}
+
+          {/* Godine */}
+          {role === 'instruktor' && (
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-700 flex items-center gap-1">
+                <Calendar className="w-4 h-4 text-blue-600" />
+                Godine
+              </label>
+              <input 
+                type="number" 
+                placeholder="30" 
+                value={godine} 
+                onChange={e => setGodine(e.target.value)} 
+                className="w-full border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              />
+            </div>
+          )}
+
+          {/* Create button */}
+          <button 
+            onClick={handleCreateInvite} 
+            disabled={loading} 
+            className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Kreiram...
+              </>
+            ) : (
+              <>
+                <Send className="w-5 h-5" />
+                Kreiraj pozivnicu
+              </>
+            )}
+          </button>
         </div>
+
+        {/* Invite Data Display */}
+        {inviteData && (
+          <div className="mt-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl animate-fadeIn">
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <h3 className="font-semibold text-green-800">Pozivnica kreirana</h3>
+            </div>
+            
+            <div className="space-y-3">
+              {/* Link sa kopiranjem */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-white border border-green-200 rounded-lg p-2.5 text-sm font-mono truncate">
+                  {inviteData.inviteLink}
+                </div>
+                <button 
+                  onClick={handleCopyLink}
+                  className="p-2.5 bg-white border border-green-200 rounded-lg hover:bg-green-100 transition-colors group relative"
+                  title="Kopiraj link"
+                >
+                  {copied ? (
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  ) : (
+                    <Copy className="w-5 h-5 text-green-600 group-hover:scale-110 transition-transform" />
+                  )}
+                </button>
+              </div>
+
+              {/* Email button */}
+              <button 
+                onClick={handleSendEmail} 
+                disabled={sendingEmail} 
+                className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {sendingEmail ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Šaljem mejl...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="w-5 h-5" />
+                    Pošalji mejl
+                  </>
+                )}
+              </button>
+
+              {/* Info o pozivnici */}
+              <div className="mt-3 text-xs text-green-700 bg-green-100/50 p-2 rounded-lg">
+                <p>📧 {inviteData.email}</p>
+                <p>👤 Uloga: {inviteData.role === 'student' ? 'Student' : inviteData.role === 'instruktor' ? 'Instruktor' : 'Super Admin'}</p>
+                {inviteData.imePrezime && <p>👤 Ime: {inviteData.imePrezime}</p>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Messages */}
+        {message && (
+          <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl flex items-start gap-2">
+            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <p className="text-green-700 font-medium">{message}</p>
+          </div>
+        )}
+        
+        {error && (
+          <div className="mt-4 p-4 bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-xl flex items-start gap-2">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-red-700 font-medium">{error}</p>
+          </div>
+        )}
       </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
