@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { db, functions } from '@/lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { Mail, User, School, Users, Calendar, Link as LinkIcon, Send, Copy, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Mail, User, School, Users, Calendar, Send, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 type Role = 'student' | 'instruktor' | 'superadmin';
 
@@ -23,7 +23,6 @@ export default function SendInvite() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
 
   const [inviteData, setInviteData] = useState<{
     email: string;
@@ -58,7 +57,7 @@ export default function SendInvite() {
   }, [autoSkolaId, instruktori]);
 
   const handleCreateInvite = async () => {
-    setError(''); setMessage(''); setInviteData(null); setLoading(true); setCopied(false);
+    setError(''); setMessage(''); setInviteData(null); setLoading(true);
 
     if (!email) { setError('Unesite email'); setLoading(false); return; }
     if (role === 'student' && (!autoSkolaId || !instruktorId)) { setError('Izaberite autoškolu i instruktora'); setLoading(false); return; }
@@ -74,47 +73,22 @@ export default function SendInvite() {
         imePrezime: imePrezime || null,
         godine: godine ? Number(godine) : null,
       });
-     const data = (result as any).data;
+      const data = (result as any).data;
 
-// Provera da li su podaci sačuvani
-console.log('Podaci iz funkcije:', data);
+      console.log('Podaci iz funkcije:', data);
 
-// kopiš link u clipboard (ako postoji)
-if (data?.inviteLink) {
-  await navigator.clipboard.writeText(data.inviteLink);
-  setCopied(true);
-  setMessage('✅ Link kreiran i kopiran u clipboard!');
-} else {
-  setMessage('✅ Link kreiran (nije kopiran).');
-}
+      setMessage('✅ Link je uspešno kreiran!');
 
-// Postavi inviteData koristeći vrednosti iz odgovora funkcije
-setInviteData({
-  email: data.email,
-  inviteLink: data.inviteLink,
-  role: data.role,
-  imePrezime: data.imePrezime ?? null,
-  godine: data.godine ?? null,
-  autoSkolaId: data.autoSkolaId ?? null,
-  instruktorId: data.instruktorId ?? null,
-  inviteId: data.inviteId,
-});
-      
-      // Dodatna provera da li je invite sačuvan u bazi
-      const token = data.inviteLink.split('token=')[1];
-      if (token) {
-        const invitesRef = collection(db, 'invites');
-        const q = query(invitesRef, where('token', '==', token));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          const inviteDoc = querySnapshot.docs[0];
-          const inviteData = inviteDoc.data();
-          console.log('Podaci iz baze:', inviteData);
-          if (!inviteData.autoSkolaId && role !== 'superadmin') {
-            console.warn('UPOZORENJE: autoSkolaId nije sačuvan u bazi!');
-          }
-        }
-      }
+      setInviteData({
+        email: data.email,
+        inviteLink: data.inviteLink,
+        role: data.role,
+        imePrezime: data.imePrezime ?? null,
+        godine: data.godine ?? null,
+        autoSkolaId: data.autoSkolaId ?? null,
+        instruktorId: data.instruktorId ?? null,
+        inviteId: data.inviteId,
+      });
       
       setEmail(''); setImePrezime(''); setGodine(''); setAutoSkolaId(''); setInstruktorId('');
     } catch (err: any) {
@@ -140,7 +114,6 @@ setInviteData({
       
       if (!emailFromDb) throw new Error('Nema email adrese u bazi');
       
-      // Provera da li invite ima autoSkolaId i instruktorId
       console.log('Slanje emaila za invite:', {
         autoSkolaId: inviteDataFromDb.autoSkolaId,
         instruktorId: inviteDataFromDb.instruktorId,
@@ -153,7 +126,6 @@ setInviteData({
         body: JSON.stringify({ 
           email: emailFromDb, 
           inviteLink: inviteData.inviteLink,
-          // Prosledi i ove podatke ako su potrebni za email template
           autoSkolaId: inviteDataFromDb.autoSkolaId,
           instruktorId: inviteDataFromDb.instruktorId,
           role: inviteDataFromDb.role
@@ -167,14 +139,6 @@ setInviteData({
       else setError(data.error || `Greška ${response.status}`);
     } catch (err: any) { setError('Greška pri slanju mejla: ' + err.message); }
     finally { setSendingEmail(false); }
-  };
-
-  const handleCopyLink = () => {
-    if (inviteData?.inviteLink) {
-      navigator.clipboard.writeText(inviteData.inviteLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
   };
 
   return (
@@ -330,24 +294,6 @@ setInviteData({
             </div>
             
             <div className="space-y-3">
-              {/* Link sa kopiranjem */}
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-white border border-green-200 rounded-lg p-2.5 text-sm font-mono truncate">
-                  {inviteData.inviteLink}
-                </div>
-                <button 
-                  onClick={handleCopyLink}
-                  className="p-2.5 bg-white border border-green-200 rounded-lg hover:bg-green-100 transition-colors group relative"
-                  title="Kopiraj link"
-                >
-                  {copied ? (
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                  ) : (
-                    <Copy className="w-5 h-5 text-green-600 group-hover:scale-110 transition-transform" />
-                  )}
-                </button>
-              </div>
-
               {/* Email button */}
               <button 
                 onClick={handleSendEmail} 

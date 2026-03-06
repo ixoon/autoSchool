@@ -2,19 +2,77 @@
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Car, Menu, X } from "lucide-react"
-import { auth } from "../lib/firebase"
+import { auth, db } from "../lib/firebase"
 import { onAuthStateChanged } from "firebase/auth"
+import { doc, getDoc } from "firebase/firestore"
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoggedIn(!!user)
+      
+      if (user) {
+        setLoading(true)
+        try {
+          // Dohvati rolu iz users kolekcije
+          const userRef = doc(db, "users", user.uid)
+          const userSnap = await getDoc(userRef)
+          
+          if (userSnap.exists()) {
+            const userData = userSnap.data()
+            setUserRole(userData.role || null)
+          } else {
+            setUserRole(null)
+          }
+        } catch (error) {
+          console.error("Greška pri dohvatanju role:", error)
+          setUserRole(null)
+        } finally {
+          setLoading(false)
+        }
+      } else {
+        setUserRole(null)
+      }
     })
     return () => unsubscribe()
   }, [])
+
+  // Funkcija za dobijanje putanje panela na osnovu role
+  const getPanelPath = () => {
+    if (!userRole) return "/"
+    
+    switch(userRole) {
+      case "superadmin":
+        return "/superadmin"
+      case "instruktor":
+        return "/instruktor-panel"
+      case "student":
+        return "/student/dashboard"
+      default:
+        return "/"
+    }
+  }
+
+  // Funkcija za dobijanje teksta dugmeta
+  const getPanelText = () => {
+    if (!userRole) return "Moj panel"
+    
+    switch(userRole) {
+      case "superadmin":
+        return "Admin panel"
+      case "instruktor":
+        return "Instruktor panel"
+      case "student":
+        return "Moj panel"
+      default:
+        return "Moj panel"
+    }
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/90 backdrop-blur-md shadow-sm">
@@ -45,8 +103,11 @@ const Navbar = () => {
                 </Link>
               </>
             ) : (
-              <Link href="/student" className="px-5 py-2.5 text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg shadow-md hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 transform hover:-translate-y-0.5">
-                Moj panel
+              <Link 
+                href={getPanelPath()} 
+                className="px-5 py-2.5 text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg shadow-md hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 transform hover:-translate-y-0.5"
+              >
+                {loading ? "Učitavanje..." : getPanelText()}
               </Link>
             )}
           </div>
@@ -74,7 +135,13 @@ const Navbar = () => {
                     <Link href="/login" className="px-4 py-2.5 text-sm font-medium text-center text-slate-700 hover:text-blue-600 rounded-lg border border-slate-200 hover:border-blue-200 hover:bg-blue-50 transition-all duration-200" onClick={() => setMobileMenuOpen(false)}>Prijava</Link>
                   </>
                 ) : (
-                  <Link href="/student" className="px-5 py-3 text-sm font-semibold text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg shadow-md hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200" onClick={() => setMobileMenuOpen(false)}>Moj panel</Link>
+                  <Link 
+                    href={getPanelPath()} 
+                    className="px-5 py-3 text-sm font-semibold text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg shadow-md hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200" 
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {loading ? "Učitavanje..." : getPanelText()}
+                  </Link>
                 )}
               </div>
             </nav>

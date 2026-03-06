@@ -10,7 +10,7 @@ import {
   GraduationCap, Clock, Phone, Mail, ChevronRight, Home, 
   Menu, Bell, BookOpen, Award, TrendingUp, AlertCircle, X
 } from 'lucide-react';
-import Settings2 from '../../../Components/Settings';
+import StudentSettings from '../../../Components/StudentSettings';
 import { getDocs, collection, query, where, doc, getDoc } from 'firebase/firestore';
 import TestsList from '../../../Components/TestsList';
 import RecentTests from '../../../Components/RecentTests';
@@ -471,7 +471,7 @@ const StudentDashboard = () => {
       case "Podesavanja":
         return (
           <div className="animate-fadeIn">
-            <Settings2 />
+            <StudentSettings />
           </div>
         );
 

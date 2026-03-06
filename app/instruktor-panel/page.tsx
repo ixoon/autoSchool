@@ -6,7 +6,7 @@ import Protected from '../../Components/Protected'
 import Settings2 from '../../Components/Settings';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
-import { collection, getDocs, addDoc, serverTimestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp, deleteDoc, doc, updateDoc, query, where } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import TestsList from '../../Components/TestsList';
 
@@ -14,10 +14,11 @@ const Page = () => {
     const [activeSection, setActiveSection] = useState<"Glavna" | "Podesavanja">("Glavna");
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [instructorData, setInstructorData] = useState<any>(null);
 
-    // STUDENTI I CASOVI
-    const [students, setStudents] = useState<any[]>([]);
-    const [lessons, setLessons] = useState<any[]>([]);
+    // STUDENTI I CASOVI - filtrirani po instruktoru
+    const [myStudents, setMyStudents] = useState<any[]>([]);
+    const [myLessons, setMyLessons] = useState<any[]>([]);
 
     // MODAL ZA DODAVANJE
     const [openModal, setOpenModal] = useState(false);
@@ -43,13 +44,32 @@ const Page = () => {
     const router = useRouter();
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 setCurrentUser({
                     email: user.email!,
                     uid: user.uid,
                     fullName: user.displayName || user.email?.split('@')[0]
                 });
+
+                // Fetch instructor data from Instruktori collection
+                try {
+                    const instruktorQuery = query(
+                        collection(db, "Instruktori"),
+                        where("email", "==", user.email)
+                    );
+                    const instruktorSnapshot = await getDocs(instruktorQuery);
+                    
+                    if (!instruktorSnapshot.empty) {
+                        const instruktorDoc = instruktorSnapshot.docs[0];
+                        setInstructorData({
+                            id: instruktorDoc.id,
+                            ...instruktorDoc.data()
+                        });
+                    }
+                } catch (error) {
+                    console.error("Greška pri učitavanju instruktora:", error);
+                }
             }
         });
         return () => unsubscribe();
@@ -60,29 +80,61 @@ const Page = () => {
         router.push("/")
     }
 
-    // FETCH STUDENTS
+    // FETCH MY STUDENTS - samo studenti koji imaju ovog instruktora
     useEffect(() => {
-        const fetchStudents = async () => {
-            const snapshot = await getDocs(collection(db, "studenti"));
-            setStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        };
-        fetchStudents();
-    }, []);
+        const fetchMyStudents = async () => {
+            if (!instructorData?.id) return;
 
-    // FETCH LESSONS
-    useEffect(() => {
-        const fetchLessons = async () => {
-            const snapshot = await getDocs(collection(db, "lessons"));
-            setLessons(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            try {
+                const studentsQuery = query(
+                    collection(db, "studenti"),
+                    where("instruktorId", "==", instructorData.id)
+                );
+                const snapshot = await getDocs(studentsQuery);
+                setMyStudents(snapshot.docs.map(doc => ({ 
+                    id: doc.id, 
+                    ...doc.data() 
+                })));
+            } catch (error) {
+                console.error("Greška pri učitavanju studenata:", error);
+            }
         };
-        fetchLessons();
-    }, []);
+
+        if (instructorData?.id) {
+            fetchMyStudents();
+        }
+    }, [instructorData]);
+
+    // FETCH MY LESSONS - samo časovi ovog instruktora
+    useEffect(() => {
+        const fetchMyLessons = async () => {
+            if (!currentUser?.uid) return;
+
+            try {
+                const lessonsQuery = query(
+                    collection(db, "lessons"),
+                    where("instructorId", "==", currentUser.uid)
+                );
+                const snapshot = await getDocs(lessonsQuery);
+                setMyLessons(snapshot.docs.map(doc => ({ 
+                    id: doc.id, 
+                    ...doc.data() 
+                })));
+            } catch (error) {
+                console.error("Greška pri učitavanju časova:", error);
+            }
+        };
+
+        if (currentUser?.uid) {
+            fetchMyLessons();
+        }
+    }, [currentUser]);
 
     const today = new Date().toISOString().split("T")[0];
 
-    const lessonsToday = lessons.filter(l => l.date === today).length;
+    const lessonsToday = myLessons.filter(l => l.date === today).length;
 
-    const lessonsThisWeek = lessons.filter(l => {
+    const lessonsThisWeek = myLessons.filter(l => {
         const lessonDate = new Date(l.date);
         const now = new Date();
         const firstDay = new Date(now.setDate(now.getDate() - now.getDay()));
@@ -91,7 +143,7 @@ const Page = () => {
     }).length;
 
     const handleAddLesson = async () => {
-        if (!selectedStudent || !date || !startTime || !endTime) return;
+        if (!selectedStudent || !date || !startTime || !endTime || !currentUser?.uid) return;
 
         const newLesson = {
             studentId: selectedStudent,
@@ -103,7 +155,7 @@ const Page = () => {
         };
 
         const docRef = await addDoc(collection(db, "lessons"), newLesson);
-        setLessons(prev => [...prev, { id: docRef.id, ...newLesson }]);
+        setMyLessons(prev => [...prev, { id: docRef.id, ...newLesson }]);
         setOpenModal(false);
         setSelectedStudent("");
         setDate("");
@@ -114,7 +166,7 @@ const Page = () => {
     const handleDeleteLesson = async (lessonId: string) => {
         try {
             await deleteDoc(doc(db, "lessons", lessonId));
-            setLessons(prev => prev.filter(l => l.id !== lessonId));
+            setMyLessons(prev => prev.filter(l => l.id !== lessonId));
             setDeleteConfirm(null);
             setOpenDropdown(null);
         } catch (error) {
@@ -146,7 +198,7 @@ const Page = () => {
 
             await updateDoc(lessonRef, updatedData);
             
-            setLessons(prev => prev.map(l => 
+            setMyLessons(prev => prev.map(l => 
                 l.id === editingLesson.id ? { ...l, ...updatedData } : l
             ));
             
@@ -158,7 +210,7 @@ const Page = () => {
     };
 
     // Sortiranje časova po datumu i vremenu
-    const sortedLessons = [...lessons].sort((a, b) => {
+    const sortedLessons = [...myLessons].sort((a, b) => {
         const dateA = new Date(`${a.date}T${a.startTime}`);
         const dateB = new Date(`${b.date}T${b.startTime}`);
         return dateA.getTime() - dateB.getTime();
@@ -204,7 +256,7 @@ const Page = () => {
                                 <div className="flex justify-between items-center relative">
                                     <div>
                                         <p className="text-xs sm:text-sm font-medium text-slate-500">Moji studenti</p>
-                                        <h3 className="text-2xl sm:text-3xl font-bold text-slate-800 mt-1 sm:mt-2">{students.length}</h3>
+                                        <h3 className="text-2xl sm:text-3xl font-bold text-slate-800 mt-1 sm:mt-2">{myStudents.length}</h3>
                                         <p className="text-[10px] sm:text-xs text-slate-400 mt-1">Aktivni studenti</p>
                                     </div>
                                     <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20 group-hover:scale-110 transition-transform duration-300">
@@ -212,7 +264,9 @@ const Page = () => {
                                     </div>
                                 </div>
                                 <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-100">
-                                    <span className="text-xs sm:text-sm text-slate-600">➕ Poslednji dodat: pre 2 dana</span>
+                                    <span className="text-xs sm:text-sm text-slate-600">
+                                        {myStudents.length > 0 ? `➕ ${myStudents.length} studenata` : '➕ Još uvek nema studenata'}
+                                    </span>
                                 </div>
                             </div>
 
@@ -319,7 +373,7 @@ const Page = () => {
                                                     
                                                     <div className="grid gap-2 sm:gap-3 pl-3 sm:pl-5">
                                                         {dayLessons.map((lesson: any) => {
-                                                            const student = students.find(s => s.id === lesson.studentId);
+                                                            const student = myStudents.find(s => s.id === lesson.studentId);
                                                             const isCurrentLesson = lesson.date === today;
                                                             
                                                             return (
@@ -457,10 +511,13 @@ const Page = () => {
                                                     className="w-full border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white"
                                                 >
                                                     <option value="">Izaberi studenta</option>
-                                                    {students.map(s => (
+                                                    {myStudents.map(s => (
                                                         <option key={s.id} value={s.id}>{s.fullName}</option>
                                                     ))}
                                                 </select>
+                                                {myStudents.length === 0 && (
+                                                    <p className="text-xs text-amber-600 mt-1">Nemate dodeljenih studenata</p>
+                                                )}
                                             </div>
 
                                             <div>
@@ -503,9 +560,9 @@ const Page = () => {
                                                 </button>
                                                 <button
                                                     onClick={handleAddLesson}
-                                                    disabled={!selectedStudent || !date || !startTime || !endTime}
+                                                    disabled={!selectedStudent || !date || !startTime || !endTime || myStudents.length === 0}
                                                     className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 ${
-                                                        selectedStudent && date && startTime && endTime
+                                                        selectedStudent && date && startTime && endTime && myStudents.length > 0
                                                             ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-600/20'
                                                             : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                                                     }`}
@@ -552,7 +609,7 @@ const Page = () => {
                                                     className="w-full border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white"
                                                 >
                                                     <option value="">Izaberi studenta</option>
-                                                    {students.map(s => (
+                                                    {myStudents.map(s => (
                                                         <option key={s.id} value={s.id}>{s.fullName}</option>
                                                     ))}
                                                 </select>

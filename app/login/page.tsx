@@ -196,20 +196,6 @@ const Page = () => {
               )}
             </form>
 
-            {/* Link za registraciju */}
-            <div className="mt-6 pt-6 border-t border-slate-200 text-center">
-              <p className="text-sm text-slate-600">
-                Nemate nalog?{' '}
-                <a 
-                  href="/register" 
-                  className="text-blue-600 hover:text-blue-800 font-medium transition-colors inline-flex items-center gap-1"
-                >
-                  Registrujte se
-                  <ArrowRight className="w-4 h-4" />
-                </a>
-              </p>
-            </div>
-
             {/* Info za testiranje */}
             
           </div>
