@@ -14,6 +14,7 @@ import TestCreator from "../../Components/TestCreator";
 import { useRouter } from "next/navigation";
 import SendInvite from "../../Components/SendInvite";
 import TestsList from "../../Components/TestsList";
+import StudentsManager from "@/Components/StudentsManager";
 
 const Page = () => {
     const router = useRouter();
@@ -441,12 +442,16 @@ const Page = () => {
             case "Glavna":
                 return (
                     <div>
+                        
                         <div className="mb-4 sm:mb-6 lg:mb-8">
                             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-800">Super Admin Panel</h1>
                             <p className="text-base sm:text-lg lg:text-xl text-slate-500 mt-1">Upravljajte svim autoškolama u sistemu</p>
                         </div>
                         {renderStatsCards()}
                         
+                            <div>
+                                <StudentsManager />
+                            </div>
                         <div className="mt-6 sm:mt-8 lg:mt-10 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
                             <div className="bg-white border border-slate-200 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-5 lg:p-6">
                                 <SendInvite/>

@@ -89,9 +89,9 @@ const Navbar = () => {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
-            <Link href="#features" className="text-slate-600 hover:text-blue-600 transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all hover:after:w-full after:content-[''] pb-1">O Nama</Link>
+            <Link href="/about" className="text-slate-600 hover:text-blue-600 transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all hover:after:w-full after:content-[''] pb-1">O Nama</Link>
             <Link href="#pricing" className="text-slate-600 hover:text-blue-600 transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all hover:after:w-full after:content-[''] pb-1">Cene</Link>
-            <Link href="#contact" className="text-slate-600 hover:text-blue-600 transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all hover:after:w-full after:content-[''] pb-1">Kontakt</Link>
+            <Link href="/contact" className="text-slate-600 hover:text-blue-600 transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all hover:after:w-full after:content-[''] pb-1">Kontakt</Link>
           </nav>
 
           {/* Desktop buttons */}
