@@ -42,27 +42,6 @@ const AboutPage = () => {
     },
   ];
 
-  const team = [
-    {
-      name: 'Usnija Danijali',
-      role: 'Direktor i glavni instruktor',
-      experience: '15 godina iskustva',
-      bio: 'Osnivač autoškole sa dugogodišnjim iskustvom u obuci vozača.',
-    },
-    {
-      name: 'Adis Danijali',
-      role: 'Instruktor vožnje B kategorije',
-      experience: '10 godina iskustva',
-      bio: 'Specijalizovan za rad sa početnicima i anksioznim vozačima.',
-    },
-    {
-      name: 'Milica Milenković',
-      role: 'Instruktor vožnje B kategorije',
-      experience: '8 godina iskustva',
-      bio: 'Stručnjak za defanzivnu vožnju i bezbednost u saobraćaju.',
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero sekcija sa mrežom */}
@@ -100,8 +79,8 @@ const AboutPage = () => {
                   Naša misija
                 </h2>
                 <p className="text-slate-600 leading-relaxed mb-4">
-                  Osnovani 2010. godine sa ciljem da podignemo kvalitet obuke vozača 
-                  u Srbiji. Verujemo da je dobar vozač onaj koji ne samo da zna 
+                  Osnovani 2010. godine sa ciljem da podignemo kvalitet obuke vozača. 
+                  Verujemo da je dobar vozač onaj koji ne samo da zna 
                   saobraćajne propise, već i bezbedno i odgovorno učestvuje u saobraćaju.
                 </p>
                 <p className="text-slate-600 leading-relaxed">
@@ -201,42 +180,6 @@ const AboutPage = () => {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Naš tim */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-        <div className="text-center mb-10 sm:mb-12">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800 mb-4">
-            Naš tim
-          </h2>
-          <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto">
-            Stručni i posvećeni instruktori koji će vas voditi kroz proces obuke
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {team.map((member, index) => (
-            <div key={index} className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 p-6 hover:shadow-xl transition-all duration-300">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <span className="text-2xl font-bold text-white">
-                  {member.name.charAt(0)}
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-slate-800 text-center mb-1">
-                {member.name}
-              </h3>
-              <p className="text-sm text-blue-600 font-medium text-center mb-2">
-                {member.role}
-              </p>
-              <p className="text-xs text-slate-500 text-center mb-3">
-                {member.experience}
-              </p>
-              <p className="text-sm text-slate-600 text-center">
-                {member.bio}
-              </p>
-            </div>
-          ))}
         </div>
       </div>
 
