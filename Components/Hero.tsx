@@ -48,7 +48,7 @@ const Hero = () => {
             <ArrowRight className='w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform' />
           </button>
           
-          <a href='/requests' className='w-full sm:w-auto'>
+          <a href='/about' className='w-full sm:w-auto'>
             <button className='group w-full bg-white border-2 border-slate-200 text-slate-700 font-semibold rounded-lg sm:rounded-xl px-6 sm:px-7 md:px-8 py-3 sm:py-3.5 md:py-4 text-sm sm:text-base hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 transition-all duration-300 flex items-center justify-center gap-2'>
               Pogledaj cene
               <span className='text-base sm:text-lg group-hover:translate-x-1 transition-transform'>→</span>
@@ -58,7 +58,7 @@ const Hero = () => {
 
         {/* Dodatni CTA za već postojeće korisnike */}
         <div className='mt-4 sm:mt-5 md:mt-6'>
-          <a href='/requests' className='text-xs sm:text-sm text-slate-500 hover:text-blue-600 transition-colors underline underline-offset-4'>
+          <a href='/login' className='text-xs sm:text-sm text-slate-500 hover:text-blue-600 transition-colors underline underline-offset-4'>
             Već imate nalog? Prijavite se
           </a>
         </div>

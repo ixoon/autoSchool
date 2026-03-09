@@ -364,7 +364,7 @@ const Page = () => {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="font-semibold text-sm sm:text-base text-slate-800 truncate">{instruktor.fullName}</p>
-                                        <p className="text-xs sm:text-sm text-slate-600 truncate">{instruktor.email} • {instruktor.godine} god.</p>
+                                        <p className="text-xs sm:text-sm text-slate-600 truncate">{instruktor.email}</p>
                                         <span className="text-[10px] sm:text-xs bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2 py-0.5 rounded-full mt-1 inline-block">
                                             {getAutoSkolaNaziv(instruktor.autoSkolaId)}
                                         </span>
@@ -448,7 +448,7 @@ const Page = () => {
                             <p className="text-base sm:text-lg lg:text-xl text-slate-500 mt-1">Upravljajte svim autoškolama u sistemu</p>
                         </div>
                         {renderStatsCards()}
-                        
+
                             <div>
                                 <StudentsManager />
                             </div>

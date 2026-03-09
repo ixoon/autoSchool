@@ -137,10 +137,12 @@ const WhyUs = () => {
 
         {/* CTA Button - umesto dva dugmeta */}
         <div className="text-center mt-12 sm:mt-16">
-          <button className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:-translate-y-1">
-            Započni prijavu
-            <ArrowRight className="w-5 h-5" />
-          </button>
+          <a href='/login'>
+            <button className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:-translate-y-1">
+              Započni prijavu
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </a>
           <p className="text-sm text-slate-500 mt-4">
             Besplatne konsultacije i probni čas
           </p>
