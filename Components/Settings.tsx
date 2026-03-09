@@ -294,6 +294,7 @@ const SettingsPage = () => {
                                 onSave={handleSaveProfile}
                                 saveError={profileSaveError}
                                 saveSuccess={profileSaveSuccess}
+                                variant={currentUser?.role === 'instruktor' ? 'instructor' : 'full'}
                             />
                         )}
 

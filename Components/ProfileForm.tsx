@@ -16,6 +16,8 @@ type ProfileFormProps = {
   onSave: (data: Partial<UserData>) => Promise<void>;
   saveError?: string;
   saveSuccess?: string;
+  /** When 'instructor', only date of birth and profile photo are shown and saved. */
+  variant?: 'full' | 'instructor';
 };
 
 type FileFieldKey = 'profilePhoto' | 'healthInsurance' | 'idCardFront' | 'idCardBack' | 'firstAid';
@@ -26,7 +28,9 @@ export default function ProfileForm({
   onSave,
   saveError,
   saveSuccess,
+  variant = 'full',
 }: ProfileFormProps) {
+  const isInstructor = variant === 'instructor';
   const [phoneNumber, setPhoneNumber] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [fileError, setFileError] = useState('');
@@ -100,13 +104,18 @@ export default function ProfileForm({
     setSaving(true);
     try {
       const payload: Partial<UserData> = {};
-      if (phoneNumber.trim()) payload.phoneNumber = phoneNumber.trim();
-      if (dateOfBirth.trim()) payload.dateOfBirth = dateOfBirth.trim();
-      if (initialData?.profilePhotoUrl) payload.profilePhotoUrl = initialData.profilePhotoUrl;
-      if (initialData?.healthInsuranceUrl) payload.healthInsuranceUrl = initialData.healthInsuranceUrl;
-      if (initialData?.idCardFrontUrl) payload.idCardFrontUrl = initialData.idCardFrontUrl;
-      if (initialData?.idCardBackUrl) payload.idCardBackUrl = initialData.idCardBackUrl;
-      if (initialData?.firstAidUrl) payload.firstAidUrl = initialData.firstAidUrl;
+      if (isInstructor) {
+        if (dateOfBirth.trim()) payload.dateOfBirth = dateOfBirth.trim();
+        if (initialData?.profilePhotoUrl) payload.profilePhotoUrl = initialData.profilePhotoUrl;
+      } else {
+        if (phoneNumber.trim()) payload.phoneNumber = phoneNumber.trim();
+        if (dateOfBirth.trim()) payload.dateOfBirth = dateOfBirth.trim();
+        if (initialData?.profilePhotoUrl) payload.profilePhotoUrl = initialData.profilePhotoUrl;
+        if (initialData?.healthInsuranceUrl) payload.healthInsuranceUrl = initialData.healthInsuranceUrl;
+        if (initialData?.idCardFrontUrl) payload.idCardFrontUrl = initialData.idCardFrontUrl;
+        if (initialData?.idCardBackUrl) payload.idCardBackUrl = initialData.idCardBackUrl;
+        if (initialData?.firstAidUrl) payload.firstAidUrl = initialData.firstAidUrl;
+      }
 
       const fieldToKey: Record<FileFieldKey, keyof UserData> = {
         profilePhoto: 'profilePhotoUrl',
@@ -138,13 +147,14 @@ export default function ProfileForm({
   const avatarUrl = previews.profilePhoto || profilePhotoUrl;
   const successMsg = localSuccess || saveSuccess;
 
-  const hasSavedData =
-    (initialData?.phoneNumber && initialData.phoneNumber.trim()) ||
-    (initialData?.dateOfBirth && initialData.dateOfBirth.trim()) ||
-    initialData?.healthInsuranceUrl ||
-    initialData?.idCardFrontUrl ||
-    initialData?.idCardBackUrl ||
-    initialData?.firstAidUrl;
+  const hasSavedData = isInstructor
+    ? ((initialData?.dateOfBirth && initialData.dateOfBirth.trim()) || !!initialData?.profilePhotoUrl)
+    : ((initialData?.phoneNumber && initialData.phoneNumber.trim()) ||
+        (initialData?.dateOfBirth && initialData.dateOfBirth.trim()) ||
+        initialData?.healthInsuranceUrl ||
+        initialData?.idCardFrontUrl ||
+        initialData?.idCardBackUrl ||
+        initialData?.firstAidUrl);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 md:space-y-6">
@@ -167,7 +177,7 @@ export default function ProfileForm({
         <div className="space-y-2">
           <p className="text-xs sm:text-sm font-medium text-slate-600">Sačuvani podaci</p>
           <div className="space-y-2 p-3 sm:p-4 border border-slate-200 rounded-lg sm:rounded-xl bg-slate-50/50">
-            {initialData?.phoneNumber?.trim() && (
+            {!isInstructor && initialData?.phoneNumber?.trim() && (
               <div className="flex items-center gap-2 sm:gap-3">
                 <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500 shrink-0" />
                 <div>
@@ -185,7 +195,7 @@ export default function ProfileForm({
                 </div>
               </div>
             )}
-            {initialData?.healthInsuranceUrl && (
+            {!isInstructor && initialData?.healthInsuranceUrl && (
               <div className="flex items-center gap-2 sm:gap-3">
                 <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500 shrink-0" />
                 <div>
@@ -196,7 +206,7 @@ export default function ProfileForm({
                 </div>
               </div>
             )}
-            {initialData?.idCardFrontUrl && (
+            {!isInstructor && initialData?.idCardFrontUrl && (
               <div className="flex items-center gap-2 sm:gap-3">
                 <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500 shrink-0" />
                 <div>
@@ -207,7 +217,7 @@ export default function ProfileForm({
                 </div>
               </div>
             )}
-            {initialData?.idCardBackUrl && (
+            {!isInstructor && initialData?.idCardBackUrl && (
               <div className="flex items-center gap-2 sm:gap-3">
                 <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500 shrink-0" />
                 <div>
@@ -218,7 +228,7 @@ export default function ProfileForm({
                 </div>
               </div>
             )}
-            {initialData?.firstAidUrl && (
+            {!isInstructor && initialData?.firstAidUrl && (
               <div className="flex items-center gap-2 sm:gap-3">
                 <Stethoscope className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500 shrink-0" />
                 <div>
@@ -235,23 +245,25 @@ export default function ProfileForm({
 
       <div className="space-y-3 sm:space-y-3.5 md:space-y-4">
         <p className="text-xs text-slate-500">Sva polja su opciona. Popunite samo ona koja želite da sačuvate.</p>
-        <div>
-          <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
-            Broj telefona
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4 pointer-events-none text-slate-400">
-              <Phone className="h-4 w-4 sm:h-5 sm:w-5" />
+        {!isInstructor && (
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+              Broj telefona
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4 pointer-events-none text-slate-400">
+                <Phone className="h-4 w-4 sm:h-5 sm:w-5" />
+              </div>
+              <input
+                type="text"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="+381..."
+                className="w-full border border-slate-200 rounded-lg sm:rounded-xl py-2.5 sm:py-3 md:py-3 pl-10 sm:pl-12 pr-3 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              />
             </div>
-            <input
-              type="text"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="+381..."
-              className="w-full border border-slate-200 rounded-lg sm:rounded-xl py-2.5 sm:py-3 md:py-3 pl-10 sm:pl-12 pr-3 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-            />
           </div>
-        </div>
+        )}
 
         <div>
           <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
@@ -287,81 +299,102 @@ export default function ProfileForm({
           )}
         </div>
 
-        {/* Health insurance */}
+        {/* Profile photo */}
         <div>
           <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
-            Zdravstveno osiguranje (dokument)
+            Profilna fotografija
           </label>
           <input
-            ref={(el) => { inputRefs.current.healthInsurance = el; }}
+            ref={(el) => { inputRefs.current.profilePhoto = el; }}
             type="file"
             accept={ACCEPT_FILES}
-            onChange={(e) => handleFileChange('healthInsurance', e.target.files?.[0] ?? null)}
+            onChange={(e) => handleFileChange('profilePhoto', e.target.files?.[0] ?? null)}
             className="block w-full text-xs sm:text-sm text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700"
           />
-          {healthInsuranceUrl && !newFiles.healthInsurance && (
-            <a href={healthInsuranceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 inline-block">
-              Pregledaj trenutni dokument
-            </a>
+          {profilePhotoUrl && !newFiles.profilePhoto && (
+            <p className="text-xs text-slate-500 mt-1">Trenutna slika postavljena.</p>
           )}
         </div>
 
-        {/* ID card front */}
-        <div>
-          <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
-            Lična karta – prednja strana
-          </label>
-          <input
-            ref={(el) => { inputRefs.current.idCardFront = el; }}
-            type="file"
-            accept={ACCEPT_FILES}
-            onChange={(e) => handleFileChange('idCardFront', e.target.files?.[0] ?? null)}
-            className="block w-full text-xs sm:text-sm text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700"
-          />
-          {idCardFrontUrl && !newFiles.idCardFront && (
-            <a href={idCardFrontUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 inline-block">
-              Pregledaj trenutnu sliku
-            </a>
-          )}
-        </div>
+        {!isInstructor && (
+          <>
+            {/* Health insurance */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+                Zdravstveno osiguranje (dokument)
+              </label>
+              <input
+                ref={(el) => { inputRefs.current.healthInsurance = el; }}
+                type="file"
+                accept={ACCEPT_FILES}
+                onChange={(e) => handleFileChange('healthInsurance', e.target.files?.[0] ?? null)}
+                className="block w-full text-xs sm:text-sm text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700"
+              />
+              {healthInsuranceUrl && !newFiles.healthInsurance && (
+                <a href={healthInsuranceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 inline-block">
+                  Pregledaj trenutni dokument
+                </a>
+              )}
+            </div>
 
-        {/* ID card back */}
-        <div>
-          <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
-            Lična karta – zadnja strana
-          </label>
-          <input
-            ref={(el) => { inputRefs.current.idCardBack = el; }}
-            type="file"
-            accept={ACCEPT_FILES}
-            onChange={(e) => handleFileChange('idCardBack', e.target.files?.[0] ?? null)}
-            className="block w-full text-xs sm:text-sm text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700"
-          />
-          {idCardBackUrl && !newFiles.idCardBack && (
-            <a href={idCardBackUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 inline-block">
-              Pregledaj trenutnu sliku
-            </a>
-          )}
-        </div>
+            {/* ID card front */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+                Lična karta – prednja strana
+              </label>
+              <input
+                ref={(el) => { inputRefs.current.idCardFront = el; }}
+                type="file"
+                accept={ACCEPT_FILES}
+                onChange={(e) => handleFileChange('idCardFront', e.target.files?.[0] ?? null)}
+                className="block w-full text-xs sm:text-sm text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700"
+              />
+              {idCardFrontUrl && !newFiles.idCardFront && (
+                <a href={idCardFrontUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 inline-block">
+                  Pregledaj trenutnu sliku
+                </a>
+              )}
+            </div>
 
-        {/* First aid */}
-        <div>
-          <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
-            Prva pomoć (dokument)
-          </label>
-          <input
-            ref={(el) => { inputRefs.current.firstAid = el; }}
-            type="file"
-            accept={ACCEPT_FILES}
-            onChange={(e) => handleFileChange('firstAid', e.target.files?.[0] ?? null)}
-            className="block w-full text-xs sm:text-sm text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700"
-          />
-          {firstAidUrl && !newFiles.firstAid && (
-            <a href={firstAidUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 inline-block">
-              Pregledaj trenutni dokument
-            </a>
-          )}
-        </div>
+            {/* ID card back */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+                Lična karta – zadnja strana
+              </label>
+              <input
+                ref={(el) => { inputRefs.current.idCardBack = el; }}
+                type="file"
+                accept={ACCEPT_FILES}
+                onChange={(e) => handleFileChange('idCardBack', e.target.files?.[0] ?? null)}
+                className="block w-full text-xs sm:text-sm text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700"
+              />
+              {idCardBackUrl && !newFiles.idCardBack && (
+                <a href={idCardBackUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 inline-block">
+                  Pregledaj trenutnu sliku
+                </a>
+              )}
+            </div>
+
+            {/* First aid */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+                Prva pomoć (dokument)
+              </label>
+              <input
+                ref={(el) => { inputRefs.current.firstAid = el; }}
+                type="file"
+                accept={ACCEPT_FILES}
+                onChange={(e) => handleFileChange('firstAid', e.target.files?.[0] ?? null)}
+                className="block w-full text-xs sm:text-sm text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700"
+              />
+              {firstAidUrl && !newFiles.firstAid && (
+                <a href={firstAidUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 inline-block">
+                  Pregledaj trenutni dokument
+                </a>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {(fileError || saveError) && (
