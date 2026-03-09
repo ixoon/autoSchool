@@ -3,7 +3,9 @@ import React, {useState, useEffect} from 'react'
 import { User, Mail, Shield, Lock, Trash2, KeyRound, AlertCircle, CheckCircle, Eye, EyeOff, Info, Settings } from 'lucide-react'
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, deleteUser, onAuthStateChanged, updatePassword } from 'firebase/auth'
 import { db } from '../lib/firebase'
-import { collection, getDocs, deleteDoc, doc, getDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, getDoc, query, where, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import ProfileForm from './ProfileForm';
+import type { UserData } from '../lib/types';
 
 const SettingsPage = () => {
     const [currentPassword, setCurrentPassword] = useState("");
@@ -20,6 +22,9 @@ const SettingsPage = () => {
     const [showDeletePassword, setShowDeletePassword] = useState(false);
 
     const [currentUser, setCurrentUser] = useState<any>(null);
+    const [profileData, setProfileData] = useState<UserData | null>(null);
+    const [profileSaveError, setProfileSaveError] = useState("");
+    const [profileSaveSuccess, setProfileSaveSuccess] = useState("");
 
     useEffect(() => {
         const auth = getAuth();
@@ -36,32 +41,64 @@ const SettingsPage = () => {
     }, [])
 
     useEffect(() => {
-    const fetchUserRole = async () => {
+    const fetchUserRoleAndProfile = async () => {
         if (!currentUser?.uid) return;
 
         try {
             const userDocRef = doc(db, "users", currentUser.uid);
             const userDocSnap = await getDoc(userDocRef);
-            
+            const userDataRef = doc(db, "userData", currentUser.uid);
+            const userDataSnap = await getDoc(userDataRef);
+
             if (userDocSnap.exists()) {
                 const userData = userDocSnap.data();
                 setCurrentUser((prev: any) => ({
                     ...prev,
-                    role: userData.role || "N/A"
+                    role: userData.role || "N/A",
+                    fullName: userData.fullName ?? prev.fullName,
                 }));
             } else {
-                console.log("Dokument ne postoji");
                 setCurrentUser((prev: any) => ({
                     ...prev,
                     role: "N/A"
                 }));
             }
+
+            if (userDataSnap.exists()) {
+                setProfileData(userDataSnap.data() as UserData);
+            } else {
+                setProfileData(null);
+            }
         } catch (err) {
-            console.error("Greška pri dohvatanju role:", err);
+            console.error("Greška pri dohvatanju podataka:", err);
         }
     }
-    fetchUserRole();
+    fetchUserRoleAndProfile();
 }, [currentUser?.uid]);
+
+    const handleSaveProfile = async (data: Partial<UserData>) => {
+        setProfileSaveError("");
+        setProfileSaveSuccess("");
+        if (!currentUser?.uid) return;
+        try {
+            await setDoc(
+                doc(db, "userData", currentUser.uid),
+                { ...data, updatedAt: serverTimestamp() },
+                { merge: true }
+            );
+            if (data.fullName !== undefined) {
+                await updateDoc(doc(db, "users", currentUser.uid), { fullName: data.fullName });
+                if (currentUser?.role === "instruktor") {
+                    await setDoc(doc(db, "Instruktori", currentUser.uid), { fullName: data.fullName }, { merge: true });
+                }
+            }
+            setProfileData((prev) => ({ ...prev, ...data } as UserData));
+            setCurrentUser((prev: any) => (prev ? { ...prev, fullName: data.fullName ?? prev.fullName } : prev));
+            setProfileSaveSuccess("Profil sačuvan.");
+        } catch (err: unknown) {
+            setProfileSaveError(err instanceof Error ? err.message : "Greška pri čuvanju profila.");
+        }
+    };
 
     const handlePasswordChange = async () => {
         setPasswordMessage("");
@@ -250,26 +287,15 @@ const SettingsPage = () => {
                     </div>
 
                     <div className="space-y-4 sm:space-y-5 md:space-y-6">
-                        {/* Avatar i osnovni podaci */}
-                        <div className="flex flex-col xs:flex-row items-center xs:items-start gap-4 sm:gap-5 md:gap-6 p-4 sm:p-5 md:p-6 bg-gradient-to-br from-slate-50 to-blue-50 rounded-lg sm:rounded-xl border border-slate-200">
-                            <div className="relative group flex-shrink-0">
-                                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-                                    <User className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white" />
-                                </div>
-                                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-green-500 rounded-full border-2 border-white"></div>
-                            </div>
-                            <div className="text-center xs:text-left w-full min-w-0">
-                                <p className="font-bold text-base sm:text-lg md:text-xl text-slate-800 break-words">{currentUser?.fullName || "Korisnik"}</p>
-                                <p className="text-xs sm:text-sm md:text-base text-slate-600 flex items-center gap-1.5 justify-center xs:justify-start mt-0.5 sm:mt-1 break-all">
-                                    <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                                    <span className="truncate">{currentUser?.email}</span>
-                                </p>
-                                <div className="mt-2 sm:mt-3 inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 md:px-3 py-0.5 sm:py-1 md:py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs sm:text-sm font-medium rounded-full shadow-sm">
-                                    <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
-                                    <span className="capitalize">{currentUser?.role || "Korisnik"}</span>
-                                </div>
-                            </div>
-                        </div>
+                        {currentUser?.uid && (
+                            <ProfileForm
+                                uid={currentUser.uid}
+                                initialData={profileData}
+                                onSave={handleSaveProfile}
+                                saveError={profileSaveError}
+                                saveSuccess={profileSaveSuccess}
+                            />
+                        )}
 
                         {/* Detalji profila */}
                         <div className="space-y-3 sm:space-y-3.5 md:space-y-4">
