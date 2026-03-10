@@ -1,5 +1,5 @@
 import React from 'react'
-import { ArrowRight, CheckCircle } from 'lucide-react'
+import { CheckCircle } from 'lucide-react'
 
 const Hero = () => {
   return (
@@ -39,21 +39,6 @@ const Hero = () => {
           <p className='text-slate-600 text-sm sm:text-base md:text-lg lg:text-xl px-2'>
             instruktorima. Učite teoriju od kuće i vežbajte sa najboljima.
           </p>
-        </div>
-
-        {/* CTA Dugmad */}
-        <div className='flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4'>
-          <button className='group bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg sm:rounded-xl px-6 sm:px-7 md:px-8 py-3 sm:py-3.5 md:py-4 w-full sm:w-auto text-sm sm:text-base hover:shadow-xl hover:shadow-blue-200 hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center gap-2'>
-            Započni besplatnu prijavu
-            <ArrowRight className='w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform' />
-          </button>
-          
-          <a href='/about' className='w-full sm:w-auto'>
-            <button className='group w-full bg-white border-2 border-slate-200 text-slate-700 font-semibold rounded-lg sm:rounded-xl px-6 sm:px-7 md:px-8 py-3 sm:py-3.5 md:py-4 text-sm sm:text-base hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 transition-all duration-300 flex items-center justify-center gap-2'>
-              Pogledaj cene
-              <span className='text-base sm:text-lg group-hover:translate-x-1 transition-transform'>→</span>
-            </button>
-          </a>
         </div>
 
         {/* Dodatni CTA za već postojeće korisnike */}

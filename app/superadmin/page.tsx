@@ -10,6 +10,7 @@ import {
   ChevronRight, Menu, X, Bell, Home, Award, BookOpen 
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import TestCreator from "../../Components/TestCreator";
 import { useRouter } from "next/navigation";
 import SendInvite from "../../Components/SendInvite";
@@ -358,7 +359,7 @@ const Page = () => {
                     <div className="space-y-2 sm:space-y-3 max-h-[350px] sm:max-h-[400px] overflow-y-auto pr-1 sm:pr-2 scrollbar-thin">
                         {instruktori.map((instruktor, index) => (
                             <div key={instruktor.id} className="border border-slate-200 p-3 sm:p-4 rounded-lg sm:rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200">
-                                <div className="flex items-center gap-2 sm:gap-3">
+                                <Link href={`/user/${instruktor.id}`} className="flex items-center gap-2 sm:gap-3">
                                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-600 to-pink-600 text-white rounded-lg sm:rounded-xl flex items-center justify-center font-semibold text-sm sm:text-base shadow-md">
                                         {index + 1}
                                     </div>
@@ -369,7 +370,8 @@ const Page = () => {
                                             {getAutoSkolaNaziv(instruktor.autoSkolaId)}
                                         </span>
                                     </div>
-                                </div>
+                                    <ChevronRight className="w-5 h-5 text-slate-400 shrink-0" />
+                                </Link>
                             </div>
                         ))}
                     </div>

@@ -12,6 +12,7 @@ import {
   Users, User, Mail, Trash2, Loader2, AlertCircle, 
   School, Calendar, Search, Filter, ChevronRight, X
 } from "lucide-react"
+import Link from "next/link"
 
 type Student = {
   id: string
@@ -166,8 +167,11 @@ export default function StudentsManager() {
             >
               <div className="p-4 sm:p-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  {/* Leva strana - info */}
-                  <div className="flex items-start gap-3 sm:gap-4 flex-1">
+                  {/* Leva strana - info (klik otvara profil) */}
+                  <Link
+                    href={`/user/${student.id}`}
+                    className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0"
+                  >
                     <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
                       <User className="w-6 h-6 text-white" />
                     </div>
@@ -200,7 +204,7 @@ export default function StudentsManager() {
                         </div>
                       )}
                     </div>
-                  </div>
+                  </Link>
 
                   {/* Desna strana - akcije */}
                   <div className="flex items-center gap-2 sm:pl-4">
