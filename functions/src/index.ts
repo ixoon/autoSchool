@@ -13,6 +13,8 @@ type InviteData = {
   role: "student" | "instruktor" | "superadmin";
   autoSkolaId?: string | null;
   instruktorId?: string | null;
+  imePrezime?: string | null;  // <-- DODATO
+  godine?: number | null;      // <-- DODATO (ako ti treba)
 };
 
 export const createInvite = onCall<InviteData>(async (request) => {
@@ -25,7 +27,7 @@ export const createInvite = onCall<InviteData>(async (request) => {
       throw new HttpsError("unauthenticated", "Morate biti ulogovani.");
     }
 
-    console.log("OVO JE NOVA VERZIJA FUNKCIJE 123456");
+    console.log("OVO JE NOVA VERZIJA FUNKCIJE SA IMENOM 123456");
     const uid = request.auth.uid;
     console.log("UID korisnika:", uid);
 
@@ -46,8 +48,8 @@ export const createInvite = onCall<InviteData>(async (request) => {
       );
     }
 
-    const { email, role, autoSkolaId = null, instruktorId = null } = request.data;
-    console.log("Email:", email, "Role:", role, "AutoSkolaId:", autoSkolaId, "InstruktorId:", instruktorId);
+    const { email, role, autoSkolaId = null, instruktorId = null, imePrezime = null, godine = null } = request.data;  // <-- DODATO
+    console.log("Email:", email, "Role:", role, "AutoSkolaId:", autoSkolaId, "InstruktorId:", instruktorId, "ImePrezime:", imePrezime);  // <-- DODATO
 
     if (!email || !role) {
       throw new HttpsError("invalid-argument", "Email i rola su obavezni.");
@@ -57,7 +59,7 @@ export const createInvite = onCall<InviteData>(async (request) => {
       throw new HttpsError("invalid-argument", "Neispravna rola.");
     }
 
-    // SERVER-SIDE validacije (dodato)
+    // SERVER-SIDE validacije
     if (role === "instruktor" && (!autoSkolaId || autoSkolaId === "")) {
       throw new HttpsError("invalid-argument", "Instruktor mora imati izabranu autoškolu.");
     }
@@ -91,7 +93,7 @@ export const createInvite = onCall<InviteData>(async (request) => {
       new Date(Date.now() + 48 * 60 * 60 * 1000)
     );
 
-    // Kreiranje invite-a sa autoskolom i instruktorom
+    // Kreiranje invite-a sa svim podacima
     const inviteDataToSave: any = {
       email,
       role,
@@ -101,9 +103,10 @@ export const createInvite = onCall<InviteData>(async (request) => {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       createdBy: uid,
       createdAtHuman: new Date().toISOString(),
-      // sačuvaj tačno ono što je prosleđeno (string ili null)
       autoSkolaId: autoSkolaId || null,
       instruktorId: instruktorId || null,
+      fullName: imePrezime || null,  // <-- SAČUVAJ KAO fullName (ili imePrezime)
+      godine: godine || null,
     };
 
     const inviteRef = await db.collection("invites").add(inviteDataToSave);
@@ -116,7 +119,7 @@ export const createInvite = onCall<InviteData>(async (request) => {
 
     const inviteLink = `${baseUrl}/register?token=${token}`;
 
-    // VRATI autoSkolaId i instruktorId u odgovoru (važno za frontend)
+    // VRATI SVE PODATKE u odgovoru
     return {
       success: true,
       inviteLink,
@@ -126,6 +129,8 @@ export const createInvite = onCall<InviteData>(async (request) => {
       expiresAt: expiresAt.toDate().toISOString(),
       autoSkolaId: inviteDataToSave.autoSkolaId,
       instruktorId: inviteDataToSave.instruktorId,
+      imePrezime: inviteDataToSave.fullName,  // <-- VRATI IME
+      godine: inviteDataToSave.godine,
     };
 
   } catch (error) {

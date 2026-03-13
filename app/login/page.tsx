@@ -42,14 +42,6 @@ function LoginForm() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Provera da li je email verifikovan u Firebase Auth
-      if (!user.emailVerified) {
-        await signOut(auth);
-        setError("Email nije verifikovan. Molimo vas da verifikujete email pre prijave.");
-        setLoading(false);
-        return;
-      }
-
       // Provera da li korisnik postoji u users kolekciji
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
