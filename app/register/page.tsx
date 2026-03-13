@@ -6,14 +6,12 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { auth, db } from "../../lib/firebase";
 import {
   createUserWithEmailAndPassword,
-  sendEmailVerification
 } from "firebase/auth";
 import {
   collection,
   query,
   where,
   getDocs,
-  getDoc,
   updateDoc,
   doc,
   setDoc,
@@ -47,15 +45,8 @@ function RegisterForm() {
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Funkcija za dodavanje debug poruka
-  const addDebug = (msg: string) => {
-    console.log(msg);
-    setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
-  };
 
   useEffect(() => {
     const checkInvite = async () => {
@@ -65,8 +56,6 @@ function RegisterForm() {
         return;
       }
 
-      addDebug(`Provera tokena: ${token}`);
-
       try {
         // Provera da li invite postoji
         const q = query(
@@ -75,7 +64,6 @@ function RegisterForm() {
         );
 
         const snapshot = await getDocs(q);
-        addDebug(`Broj pronađenih invite-ova: ${snapshot.size}`);
 
         if (snapshot.empty) {
           setError("Pozivnica ne postoji. Proverite link.");
@@ -85,7 +73,6 @@ function RegisterForm() {
 
         const inviteDoc = snapshot.docs[0];
         const inviteData = inviteDoc.data();
-        addDebug(`Invite podaci: ${JSON.stringify(inviteData)}`);
 
         // Provera da li je već iskorišćen
         if (inviteData.used) {
@@ -102,8 +89,7 @@ function RegisterForm() {
           return;
         }
 
-        // Provera da li korisnik već postoji u auth
-        // Ovo ne možemo direktno proveriti, ali možemo proveriti u users kolekciji
+        // Provera da li korisnik već postoji u users kolekciji
         const userCheck = await getDocs(
           query(collection(db, "users"), where("email", "==", inviteData.email))
         );
@@ -114,31 +100,12 @@ function RegisterForm() {
           return;
         }
 
-        // Provera da li već postoji u specifičnoj kolekciji
-        if (inviteData.role === "student") {
-          const studentCheck = await getDocs(
-            query(collection(db, "studenti"), where("email", "==", inviteData.email))
-          );
-          if (!studentCheck.empty) {
-            addDebug(`Upozorenje: Student već postoji u studenti kolekciji, ali ne u users`);
-          }
-        } else if (inviteData.role === "instruktor") {
-          const instruktorCheck = await getDocs(
-            query(collection(db, "Instruktori"), where("email", "==", inviteData.email))
-          );
-          if (!instruktorCheck.empty) {
-            addDebug(`Upozorenje: Instruktor već postoji u Instruktori kolekciji, ali ne u users`);
-          }
-        }
-
-        // Postavljanje podataka
+        // Postavljanje podataka - IME PREFILLED iz invite-a
+        setFullName(inviteData.fullName || "");
         setEmail(inviteData.email);
         setRole(inviteData.role);
         setInviteDocId(inviteDoc.id);
         setInviteData(inviteData);
-        if (inviteData.fullName) {
-          setFullName(inviteData.fullName);
-        }
         setLoading(false);
 
       } catch (err) {
@@ -163,19 +130,22 @@ function RegisterForm() {
     setRegistering(true);
 
     try {
+      // Kreiranje korisnika u Firebase Auth - BEZ slanja verifikacionog emaila
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       const user = cred.user;
 
       const batch = writeBatch(db);
 
-      // USERS
+      // USERS kolekcija
       batch.set(doc(db, "users", user.uid), {
         fullName,
         email,
         role,
         createdAt: serverTimestamp(),
+        emailVerified: true // Dodajemo polje za praćenje
       });
 
+      // Dodavanje u odgovarajuću kolekciju po roli
       if (role === "student") {
         if (!inviteData.autoSkolaId || !inviteData.instruktorId) {
           throw new Error("Student mora imati autoskolu i instruktora.");
@@ -203,6 +173,7 @@ function RegisterForm() {
         });
       }
 
+      // Označavanje invite-a kao iskorišćenog
       batch.update(doc(db, "invites", inviteDocId), {
         used: true,
         usedBy: user.uid,
@@ -210,10 +181,14 @@ function RegisterForm() {
       });
 
       await batch.commit();
+      
       setSuccess(true);
-
-      setTimeout(() => router.push("/login"), 3000);
+      
+      // Preusmeravanje na login stranicu
+      setTimeout(() => router.push("/login?registered=true"), 2000);
+      
     } catch (err: any) {
+      console.error("Registration error:", err);
       setError(err.message || "Greška pri registraciji.");
     } finally {
       setRegistering(false);
@@ -248,15 +223,9 @@ function RegisterForm() {
             </div>
             <h2 className="text-2xl font-bold text-slate-800 mb-2">Uspešna registracija!</h2>
             <p className="text-slate-600 mb-6">
-              Proverite vaš email <span className="font-semibold text-blue-600">{email}</span> i verifikujte nalog.
+              Vaš nalog je uspešno kreiran.
             </p>
             
-            <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 mb-6">
-              <p className="text-sm text-blue-700">
-                Nakon verifikacije, moći ćete da se prijavite na sistem.
-              </p>
-            </div>
-
             <div className="flex justify-center">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
             </div>
@@ -338,7 +307,7 @@ function RegisterForm() {
           {/* Forma */}
           <div className="p-6">
             <form className="space-y-5" onSubmit={handleRegister}>
-              {/* Ime i prezime */}
+              {/* Ime i prezime - SADA JE PREFILLED iz invite-a */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700 flex items-center gap-1">
                   <User className="w-4 h-4 text-blue-600" />
@@ -451,29 +420,6 @@ function RegisterForm() {
                 </div>
               </div>
 
-              {/* Password strength indicator */}
-              {password && (
-                <div className="space-y-2">
-                  <div className="flex gap-1 h-1">
-                    <div className={`flex-1 rounded-full transition-all duration-300 ${
-                      password.length >= 6 ? 'bg-green-500' : 'bg-slate-200'
-                    }`} />
-                    <div className={`flex-1 rounded-full transition-all duration-300 ${
-                      /[A-Z]/.test(password) ? 'bg-green-500' : 'bg-slate-200'
-                    }`} />
-                    <div className={`flex-1 rounded-full transition-all duration-300 ${
-                      /[0-9]/.test(password) ? 'bg-green-500' : 'bg-slate-200'
-                    }`} />
-                    <div className={`flex-1 rounded-full transition-all duration-300 ${
-                      /[^A-Za-z0-9]/.test(password) ? 'bg-green-500' : 'bg-slate-200'
-                    }`} />
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    Koristite najmanje 6 karaktera, veliko slovo, broj i specijalni karakter
-                  </p>
-                </div>
-              )}
-
               {/* Submit dugme */}
               <button
                 type="submit"
@@ -516,23 +462,6 @@ function RegisterForm() {
             </div>
           </div>
         </div>
-
-        {/* Debug info - sakriveno u produkciji */}
-        {process.env.NODE_ENV === 'development' && debugInfo.length > 0 && (
-          <div className="mt-8 p-4 bg-slate-800 rounded-xl">
-            <h3 className="font-semibold text-white mb-2 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
-              Debug info:
-            </h3>
-            <pre className="text-xs text-slate-300 overflow-auto max-h-40">
-              {debugInfo.map((msg, i) => (
-                <div key={i} className="border-b border-slate-700 py-1">
-                  {msg}
-                </div>
-              ))}
-            </pre>
-          </div>
-        )}
       </div>
 
       <style jsx>{`
