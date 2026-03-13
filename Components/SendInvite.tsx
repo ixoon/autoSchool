@@ -63,6 +63,7 @@ export default function SendInvite() {
     if (role === 'student' && (!autoSkolaId || !instruktorId)) { setError('Izaberite autoškolu i instruktora'); setLoading(false); return; }
     if (role === 'instruktor' && !autoSkolaId) { setError('Izaberite autoškolu'); setLoading(false); return; }
 
+    
     try {
       const createInvite = httpsCallable(functions, 'createInvite');
       const result = await createInvite({
