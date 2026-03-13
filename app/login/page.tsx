@@ -30,8 +30,9 @@ const Page = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      await user.reload();
+
       if (!user.emailVerified) {
-        await sendEmailVerification(user);
         await signOut(auth);
         setError("Email nije verifikovan. Poslali smo vam novi verifikacioni email (proverite i spam).");
         setLoading(false);

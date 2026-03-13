@@ -240,7 +240,7 @@ export default function SendInvite() {
                 Ime i prezime
               </label>
               <input 
-                placeholder="Marko Marković" 
+                placeholder="Ime i prezime" 
                 value={imePrezime} 
                 onChange={e => setImePrezime(e.target.value)} 
                 className="w-full border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
