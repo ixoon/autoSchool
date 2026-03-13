@@ -348,7 +348,7 @@ const Page = () => {
                                     <div className="space-y-6 sm:space-y-8">
                                         {Object.entries(groupedLessons).map(([date, dayLessons]: [string, any]) => {
                                             const isToday = date === today;
-                                            const dayName = new Date(date).toLocaleDateString('sr-RS', { 
+                                            const dayName = new Date(date).toLocaleDateString('sr-Latn-RS', { 
                                                 weekday: 'long', 
                                                 year: 'numeric', 
                                                 month: 'long', 

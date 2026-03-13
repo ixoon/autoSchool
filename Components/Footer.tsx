@@ -40,7 +40,7 @@ const Footer = () => {
               {["Prijava", "Registracija", "Cenovnik", "O nama", "Kontakt"].map((item) => (
                 <li key={item}>
                   <a 
-                    href="#" 
+                    href={`/${item.toLowerCase().replace(' ', '-')}`} 
                     className="text-slate-600 hover:text-blue-600 transition-colors duration-200 inline-block"
                   >
                     {item}
