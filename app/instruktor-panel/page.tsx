@@ -8,6 +8,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
 import { collection, getDocs, addDoc, serverTimestamp, deleteDoc, doc, updateDoc, query, where } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import TestsList from '../../Components/TestsList';
 
 const Page = () => {
@@ -309,6 +310,28 @@ const Page = () => {
                             </div>
                         </div>
 
+                        {/* MOJI STUDENTI - lista sa linkom na profil */}
+                        {myStudents.length > 0 && (
+                            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 mt-4 sm:mt-6 p-4 sm:p-5">
+                                <h2 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2 mb-3 sm:mb-4">
+                                    <Users className="w-4 h-4 text-blue-600" />
+                                    Moji studenti
+                                </h2>
+                                <div className="flex flex-wrap gap-2">
+                                    {myStudents.map((s) => (
+                                        <Link
+                                            key={s.id}
+                                            href={`/user/${s.id}`}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-colors"
+                                        >
+                                            <User className="w-3.5 h-3.5" />
+                                            {s.fullName || 'Student'}
+                                        </Link>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* RASPORED */}
                         <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-slate-200 mt-6 sm:mt-8 overflow-hidden">
                             <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-slate-50 to-white">
@@ -437,6 +460,13 @@ const Page = () => {
                                                                                             <Edit size={14} className="sm:w-4 sm:h-4 text-blue-500" />
                                                                                             <span>Izmeni čas</span>
                                                                                         </button>
+                                                                                        <Link
+                                                                                            href={`/user/${lesson.studentId}`}
+                                                                                            className="w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors border-t border-slate-100"
+                                                                                        >
+                                                                                            <User size={14} className="sm:w-4 sm:h-4 text-blue-500" />
+                                                                                            <span>Pogledaj profil</span>
+                                                                                        </Link>
                                                                                         {deleteConfirm === lesson.id ? (
                                                                                             <div className="px-3 sm:px-4 py-2 sm:py-3 border-t border-slate-100">
                                                                                                 <p className="text-[10px] sm:text-xs text-slate-500 mb-2">Potvrdi brisanje?</p>

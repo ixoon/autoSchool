@@ -90,7 +90,6 @@ const Navbar = () => {
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
             <Link href="/about" className="text-slate-600 hover:text-blue-600 transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all hover:after:w-full after:content-[''] pb-1">O Nama</Link>
-            <Link href="#pricing" className="text-slate-600 hover:text-blue-600 transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all hover:after:w-full after:content-[''] pb-1">Cene</Link>
             <Link href="/contact" className="text-slate-600 hover:text-blue-600 transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all hover:after:w-full after:content-[''] pb-1">Kontakt</Link>
           </nav>
 
@@ -127,7 +126,6 @@ const Navbar = () => {
           <div className="md:hidden py-5 border-t border-slate-100 bg-white animate-fadeIn">
             <nav className="flex flex-col gap-4">
               <Link href="#features" className="text-slate-600 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-all duration-200" onClick={() => setMobileMenuOpen(false)}>O Nama</Link>
-              <Link href="#pricing" className="text-slate-600 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-all duration-200" onClick={() => setMobileMenuOpen(false)}>Cene</Link>
               <Link href="#contact" className="text-slate-600 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-all duration-200" onClick={() => setMobileMenuOpen(false)}>Kontakt</Link>
               <div className="flex flex-col gap-3 mt-2 px-3">
                 {!isLoggedIn ? (
