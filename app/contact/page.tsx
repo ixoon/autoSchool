@@ -115,7 +115,7 @@ export default function KontaktForma() {
                 value={formData.name}
                 onChange={handleChange}
                 disabled={loading}
-                placeholder="Marko Marković"
+                placeholder="Ime i prezime"
                 className="pl-10 w-full border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:bg-slate-50 disabled:cursor-not-allowed"
               />
             </div>
@@ -136,7 +136,7 @@ export default function KontaktForma() {
                 value={formData.email}
                 onChange={handleChange}
                 disabled={loading}
-                placeholder="marko@email.com"
+                placeholder="primer@email.com"
                 className="pl-10 w-full border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:bg-slate-50 disabled:cursor-not-allowed"
               />
             </div>

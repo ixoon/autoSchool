@@ -8,14 +8,19 @@ import Protected from '../../../../Components/Protected';
 import { 
   Clock, AlertCircle, CheckCircle, XCircle, ArrowRight, 
   Flag, Loader2, Award, BarChart3, ChevronLeft, ChevronRight,
-  HelpCircle, BookOpen, FileText
+  HelpCircle, BookOpen, FileText, Image as ImageIcon
 } from 'lucide-react';
+
+type Option = {
+  text: string;
+  imageUrl?: string;
+};
 
 type Question = {
   question: string;
   imageUrl?: string;
-  options: string[];
-  correctOptions: number[]; // indexi tacnih odgovora
+  options: Option[]; // Sada je ovo niz Option objekata, a ne string[]
+  correctOptions: number[];
   points: number;
 };
 
@@ -212,7 +217,7 @@ export default function TestRunner() {
         testId: testId,
         answers: answers.map(a => ({ selected: a })),
         score: total,
-        maxScore: maxScore, // Promenjeno iz totalPoints u maxScore
+        maxScore: maxScore,
         createdAt: now,
         expiresAt,
       });
@@ -302,14 +307,50 @@ export default function TestRunner() {
                 </div>
 
                 {/* Dugmad */}
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <button
-                    onClick={() => window.location.href = '/student/dashboard'}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg font-semibold"
-                  >
-                    Nazad na početnu
-                  </button>
-                </div>
+                
+<div className="flex flex-col sm:flex-row gap-4">
+  <button
+    onClick={async () => {
+      try {
+        const user = auth.currentUser;
+        if (!user) {
+          window.location.href = '/login';
+          return;
+        }
+
+        // Dohvati ulogu iz Firestore-a
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const role = userData.role; // Pretpostavka da je polje 'role'
+          
+          // Preusmeri na osnovu uloge
+          switch (role) {
+            case 'superadmin':
+              window.location.href = '/superadmin';
+              break;
+            case 'instruktor':
+              window.location.href = '/instruktor-panel';
+              break;
+            case 'student':
+            default:
+              window.location.href = '/student/dashboard';
+              break;
+          }
+        } else {
+          // Ako nema dokumenta, podrazumevano na login
+          window.location.href = '/login';
+        }
+      } catch (error) {
+        console.error('Greška pri preusmeravanju:', error);
+        window.location.href = '/login';
+      }
+    }}
+    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg font-semibold"
+  >
+    Nazad na početnu
+  </button>
+</div>
               </div>
             </div>
           </div>
@@ -410,36 +451,48 @@ export default function TestRunner() {
               </div>
             )}
 
-            {/* Opcije */}
-            <div className="space-y-3 mb-8">
-              {question.options.map((opt, i) => {
-                const isSelected = answers[current].includes(i);
-                
-                return (
-                  <label
-                    key={i}
-                    className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                      isSelected
-                        ? 'border-blue-500 bg-blue-50 shadow-md'
-                        : 'border-slate-200 hover:border-blue-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleOption(i)}
-                      className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                    />
-                    <span className={`flex-1 ${isSelected ? 'text-blue-700 font-medium' : 'text-slate-700'}`}>
-                      {opt}
-                    </span>
-                    {isSelected && (
-                      <CheckCircle className="w-5 h-5 text-blue-600" />
-                    )}
-                  </label>
-                );
-              })}
+            {/* Opcije - sada podržavaju i tekst i sliku */}
+            {/* Opcije - sada podržavaju i tekst i sliku */}
+<div className="space-y-3 mb-8">
+  {question.options.map((opt, i) => {
+    const isSelected = answers[current].includes(i);
+    
+    return (
+      <label
+        key={i}
+        className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+          isSelected
+            ? 'border-blue-500 bg-blue-50 shadow-md'
+            : 'border-slate-200 hover:border-blue-200 hover:bg-slate-50'
+        }`}
+      >
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => toggleOption(i)}
+          className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+        />
+        <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-4">
+          {opt.imageUrl ? (
+            <div className="flex-shrink-0">
+              <img 
+                src={opt.imageUrl} 
+                alt={`Opcija ${i + 1}`}
+                className="w-full sm:w-48 h-32 object-cover rounded-lg border-2 border-slate-200 shadow-sm"
+              />
             </div>
+          ) : null}
+          <span className={`text-base sm:text-lg ${isSelected ? 'text-blue-700 font-medium' : 'text-slate-700'}`}>
+            {opt.text || `Opcija ${i + 1}`}
+          </span>
+        </div>
+        {isSelected && (
+          <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
+        )}
+      </label>
+    );
+  })}
+</div>
 
             {/* Poruka o grešci ako nije odabran odgovor */}
             {answerError && (

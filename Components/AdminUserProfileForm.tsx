@@ -183,7 +183,7 @@ export default function AdminUserProfileForm({
               type="text"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="+381..."
+              placeholder="+"
               className="w-full border border-slate-200 rounded-lg sm:rounded-xl py-2.5 sm:py-3 pl-10 sm:pl-12 pr-3 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             />
           </div>

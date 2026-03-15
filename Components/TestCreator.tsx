@@ -10,10 +10,17 @@ import {
   CheckSquare, Square, Layers, Edit3, Award
 } from "lucide-react";
 
+type Option = {
+  text: string;
+  imageUrl?: string;
+  imageFile?: File | null;
+  imagePreview?: string | null;
+};
+
 type Question = {
   question: string;
   imageUrl: string;
-  options: string[];
+  options: Option[];
   correctOptions: number[];
   points: number;
 };
@@ -26,9 +33,12 @@ const AddTest = () => {
   const [questionText, setQuestionText] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
 
-  const [options, setOptions] = useState<string[]>(["", ""]);
+  const [options, setOptions] = useState<Option[]>([
+    { text: "" },
+    { text: "" }
+  ]);
+
   const [correctOptions, setCorrectOptions] = useState<number[]>([]);
   const [points, setPoints] = useState<number>(3);
 
@@ -48,27 +58,37 @@ const AddTest = () => {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
-      
-      // Simulacija upload progressa
-      setUploadProgress(0);
-      const interval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            return 100;
-          }
-          return prev + 10;
-        });
-      }, 100);
     } else {
       setImagePreview(null);
-      setUploadProgress(0);
     }
+  };
+
+  const handleOptionImageChange = (index: number, file: File | null) => {
+    const newOptions = [...options];
+    
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newOptions[index].imagePreview = reader.result as string;
+        setOptions([...newOptions]);
+      };
+      reader.readAsDataURL(file);
+    }
+    
+    newOptions[index].imageFile = file;
+    setOptions(newOptions);
+  };
+
+  const removeOptionImage = (index: number) => {
+    const newOptions = [...options];
+    newOptions[index].imageFile = null;
+    newOptions[index].imagePreview = null;
+    setOptions(newOptions);
   };
 
   const addOption = () => {
     if (options.length < 4) {
-      setOptions([...options, ""]);
+      setOptions([...options, { text: "" }]);
     }
   };
 
@@ -80,7 +100,7 @@ const AddTest = () => {
 
   const handleOptionChange = (index: number, value: string) => {
     const newOptions = [...options];
-    newOptions[index] = value;
+    newOptions[index].text = value;
     setOptions(newOptions);
   };
 
@@ -101,8 +121,12 @@ const AddTest = () => {
       isValid = false;
     }
 
-    if (options.some(o => !o.trim())) {
-      newErrors.options = "Sve opcije moraju biti popunjene";
+    const hasInvalidOption = options.some(opt => 
+      !opt.text.trim() && !opt.imageFile
+    );
+    
+    if (hasInvalidOption) {
+      newErrors.options = "Svaka opcija mora imati tekst ILI sliku";
       isValid = false;
     }
 
@@ -125,10 +149,27 @@ const AddTest = () => {
       imageUrl = await getDownloadURL(storageRef);
     }
 
+    const uploadedOptions = await Promise.all(
+      options.map(async (opt) => {
+        let optionImageUrl = "";
+        
+        if (opt.imageFile) {
+          const storageRef = ref(storage, `tests/options/${Date.now()}-${opt.imageFile.name}`);
+          await uploadBytes(storageRef, opt.imageFile);
+          optionImageUrl = await getDownloadURL(storageRef);
+        }
+        
+        return {
+          text: opt.text,
+          imageUrl: optionImageUrl
+        };
+      })
+    );
+
     const newQuestion: Question = {
       question: questionText,
       imageUrl,
-      options,
+      options: uploadedOptions,
       correctOptions,
       points,
     };
@@ -139,8 +180,7 @@ const AddTest = () => {
     setQuestionText("");
     setImageFile(null);
     setImagePreview(null);
-    setUploadProgress(0);
-    setOptions(["", ""]);
+    setOptions([{ text: "" }, { text: "" }]);
     setCorrectOptions([]);
     setPoints(3);
     setErrors({ question: "", options: "", correct: "" });
@@ -307,11 +347,11 @@ const AddTest = () => {
               )}
             </div>
 
-            {/* Slika */}
+            {/* Slika za pitanje (opciono) */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-1">
                 <Image className="w-4 h-4 text-blue-600" />
-                Slika (opciono)
+                Slika za pitanje (opciono)
               </label>
               <div className="flex flex-col sm:flex-row items-start gap-4">
                 <label className="cursor-pointer group">
@@ -335,16 +375,10 @@ const AddTest = () => {
                         <Eye className="w-6 h-6 text-white" />
                       </div>
                     </div>
-                    {uploadProgress > 0 && uploadProgress < 100 && (
-                      <div className="absolute -bottom-1 left-0 right-0 h-1 bg-blue-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
-                      </div>
-                    )}
                     <button
                       onClick={() => {
                         setImageFile(null);
                         setImagePreview(null);
-                        setUploadProgress(0);
                       }}
                       className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-md transition-all hover:scale-110"
                     >
@@ -355,54 +389,84 @@ const AddTest = () => {
               </div>
             </div>
 
-            {/* Opcije */}
+            {/* Opcije odgovora - svaka može biti tekst ILI slika */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-1">
+              <label className="block text-sm font-medium text-slate-700 mb-4 flex items-center gap-1">
                 <CheckSquare className="w-4 h-4 text-blue-600" />
                 Opcije odgovora <span className="text-red-500">*</span>
+                <span className="text-xs text-slate-500 ml-2">(svaka opcija mora imati tekst ILI sliku)</span>
               </label>
-              <div className="space-y-3">
+              
+              <div className="space-y-4">
                 {options.map((opt, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        value={opt}
-                        onChange={(e) => handleOptionChange(i, e.target.value)}
-                        className={`w-full border rounded-xl p-4 pr-12 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all ${
-                          correctOptions.includes(i) 
-                            ? 'border-green-300 bg-green-50/30' 
-                            : 'border-slate-200'
-                        }`}
-                        placeholder={`Opcija ${i + 1}`}
-                      />
-                      {correctOptions.includes(i) && (
-                        <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleCheckboxChange(i)}
-                        className={`p-2 rounded-lg transition-colors ${
-                          correctOptions.includes(i)
-                            ? 'bg-green-100 text-green-600'
-                            : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                        }`}
-                      >
-                        {correctOptions.includes(i) ? (
-                          <CheckCircle className="w-5 h-5" />
-                        ) : (
-                          <Square className="w-5 h-5" />
-                        )}
-                      </button>
-                      {options.length > 2 && (
+                  <div key={i} className="border border-slate-200 rounded-xl p-4 bg-slate-50/30">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 space-y-3">
+                        {/* Tekst opcije */}
+                        <input
+                          type="text"
+                          value={opt.text}
+                          onChange={(e) => handleOptionChange(i, e.target.value)}
+                          className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                          placeholder={`Tekst opcije ${i + 1} (opciono ako dodajete sliku)`}
+                        />
+                        
+                        {/* Slika opcije */}
+                        <div className="flex items-center gap-3">
+                          <label className="cursor-pointer group">
+                            <div className="flex items-center gap-2 bg-white border border-slate-200 hover:border-blue-400 px-4 py-2 rounded-lg transition-all">
+                              <Upload className="w-4 h-4 text-slate-500 group-hover:text-blue-600" />
+                              <span className="text-xs text-slate-600 group-hover:text-blue-600">Dodaj sliku za opciju</span>
+                            </div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleOptionImageChange(i, e.target.files?.[0] || null)}
+                              className="hidden"
+                            />
+                          </label>
+                          
+                          {opt.imagePreview && (
+                            <div className="relative">
+                              <img src={opt.imagePreview} alt="Option preview" className="w-16 h-16 object-cover rounded-lg border-2 border-blue-200" />
+                              <button
+                                onClick={() => removeOptionImage(i)}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-md"
+                              >
+                                <XCircle className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {/* Checkbox za tačan odgovor */}
                         <button
-                          onClick={() => removeOption(i)}
-                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                          onClick={() => handleCheckboxChange(i)}
+                          className={`p-2 rounded-lg transition-colors ${
+                            correctOptions.includes(i)
+                              ? 'bg-green-100 text-green-600'
+                              : 'bg-slate-200 text-slate-500 hover:bg-slate-300'
+                          }`}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {correctOptions.includes(i) ? (
+                            <CheckCircle className="w-5 h-5" />
+                          ) : (
+                            <Square className="w-5 h-5" />
+                          )}
                         </button>
-                      )}
+
+                        {/* Dugme za brisanje opcije */}
+                        {options.length > 2 && (
+                          <button
+                            onClick={() => removeOption(i)}
+                            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -425,7 +489,7 @@ const AddTest = () => {
               {options.length < 4 && (
                 <button
                   onClick={addOption}
-                  className="mt-3 flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors group"
+                  className="mt-4 flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors group"
                 >
                   <div className="p-1 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
                     <Plus className="w-4 h-4" />
@@ -442,7 +506,7 @@ const AddTest = () => {
                 Broj bodova
               </label>
               <div className="flex gap-3">
-                {[3, 4].map((value) => (
+                {[1, 2, 3, 4, 5].map((value) => (
                   <button
                     key={value}
                     onClick={() => setPoints(value)}
@@ -452,7 +516,7 @@ const AddTest = () => {
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
-                    {value} boda
+                    {value}
                   </button>
                 ))}
               </div>
@@ -509,17 +573,21 @@ const AddTest = () => {
                       </div>
                     )}
                     
-                    <div className="ml-11 grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                    <div className="ml-11 grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                       {q.options.map((opt, j) => (
                         <div
                           key={j}
-                          className={`p-3 rounded-xl text-sm flex items-center justify-between ${
+                          className={`p-3 rounded-xl text-sm flex items-center gap-2 ${
                             q.correctOptions.includes(j)
                               ? 'bg-green-50 text-green-800 border border-green-200'
                               : 'bg-slate-50 text-slate-600 border border-slate-200'
                           }`}
                         >
-                          <span>{opt}</span>
+                          {opt.imageUrl ? (
+                            <img src={opt.imageUrl} alt="Option" className="w-12 h-12 object-cover rounded-lg" />
+                          ) : (
+                            <span className="flex-1">{opt.text}</span>
+                          )}
                           {q.correctOptions.includes(j) && (
                             <CheckCircle className="w-4 h-4 text-green-600 ml-2 flex-shrink-0" />
                           )}
@@ -530,7 +598,7 @@ const AddTest = () => {
                     <div className="ml-11 flex items-center gap-2">
                       <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
                         <Award className="w-3 h-3" />
-                        {q.points} boda
+                        {q.points} {q.points === 1 ? 'bod' : 'boda'}
                       </span>
                     </div>
                   </div>
